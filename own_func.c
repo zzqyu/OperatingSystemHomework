@@ -10,9 +10,12 @@ void SetBitmap(int blkno, int bitmapIndex, unsigned char bit){
     //원하는 비트 index자리수를 1or0로 바꿔줌
 	
 	if (bit == (unsigned char)1)
-		tempBlock[bitmapIndex / 8] |= (1 << (bitmapIndex%8));
+		//tempBlock[bitmapIndex / 8] |= (1 << (bitmapIndex%8)); //original
+		tempBlock[bitmapIndex / 8] |= (1 << (7-bitmapIndex%8)); //reverse
 	else if (bit == (unsigned char)0)
-		tempBlock[bitmapIndex / 8] &= ~(1 << (bitmapIndex % 8));
+		//tempBlock[bitmapIndex / 8] &= ~(1 << ( bitmapIndex % 8)); //original
+		tempBlock[bitmapIndex / 8] &= ~(1 << (7 - bitmapIndex % 8)); //reverse
+
     DevWriteBlock(blkno, tempBlock);
 }
 
@@ -23,7 +26,8 @@ int GetFreeNum(int blkno) {
 	//DevReadBlock함수로 읽어옴
 	DevReadBlock(blkno, tempBlock);
 	for (int i = 0; i < BLOCK_SIZE ; i++) {
-		for (int j = 0; j < 8; j++) {
+		for (int j = 7; j >= 0; j--) { //reverse
+		//for (int j = 0; j < 8; j++) { // original
 			oneDigit = tempBlock[i] & 1;//첫째자리수
 			if (oneDigit == (unsigned char)0) return i*8+j;//첫째자리수가 0이면 i리턴
 													   //1자리 >> 해준다.

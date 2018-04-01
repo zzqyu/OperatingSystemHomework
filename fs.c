@@ -5,18 +5,10 @@
 #include "fs.h"
 #include "own_func.h"
 
-/*
-구현 해야할 파일들
-fs.c 구현. fs.c에 임의의 헤더 파일(예,  temp.h 등)을 include 가능
-fs.h, disk.c, disk.h 제공됨. 수정 불가(수정하면 감점)
-Fs.h에는 구현 해야 할 function prototype 선언함.  
-main.c에서 fs.h를 include해서 testcase가 제공되기 전에 각자 테스트함
-향후 testcase를 포함하는 main.c을 제공할 계획
-*/
-
 /*FileSysinfo, inode bitmap, block bitmap, inode list를 0으로 채워서 초기화*/
 void FileSysInit(void)
 {
+	DevCreateDisk();
     int dataRegionFirstIndex = INODELIST_BLK_FIRST + INODELIST_BLKS;
 
     //디스크 메모리 할당
