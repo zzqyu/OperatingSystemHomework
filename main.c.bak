@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "disk.h"
+#include "Disk.h"
 #include "fs.h"
 #define INODE_SIZE 64
 

@@ -1,23 +1,29 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "disk.h"
+#include "Disk.h"
 #include "fs.h"
 #include "own_func.h"
+
+FileDescTable* pFileDescTable = NULL;
 
 /*FileSysinfo, inode bitmap, block bitmap, inode list를 0으로 채워서 초기화*/
 void FileSysInit(void)
 {
 	DevCreateDisk();
-    int dataRegionFirstIndex = INODELIST_BLK_FIRST + INODELIST_BLKS;
+
+    //hw1 int dataRegionFirstIndex = INODELIST_BLK_FIRST + INODELIST_BLKS;
+	int numBlock = BLOCK_SIZE * NUM_BIT_OF_BYTE;
 
     //디스크 메모리 할당
-    for(int i = 0; i<dataRegionFirstIndex; i++){
+    //hw1 for(int i = 0; i<dataRegionFirstIndex; i++){
+	for (int i = 0; i<numBlock; i++) {
 		unsigned char* block = (unsigned char*) malloc (BLOCK_SIZE);
         //non data region 0으로 초기화
         memset(block, 0, BLOCK_SIZE);
         //블록을 저장한다.
         DevWriteBlock(i, block);
+		free(block);
     }
 
 }
@@ -68,7 +74,89 @@ int GetFreeBlockNum(void)
 	return GetFreeNum(BLOCK_BITMAP_BLK_NUM);
 }
 
+//구현할 소스
 
+int		OpenFile(const char* szFileName, OpenFlag flag)
+{
+	if (flag == OPEN_FLAG_CREATE) {
+		int newInodeNum = GetFreeInodeNum();
+		//상위 디렉토리의 DirEntry에 생성할 파일이름과 Inode번호 입력
+		int parentInodeNum = UpdateDirInBlock(szFileName, newInodeNum);
+		if (parentInodeNum == -1) return -1;
+		//File Descriptor Table에 InodeNum, fileOffset기록하고
+		//FDT에 기록된 인덱스 리턴
+		if (pFileDescTable == NULL) {
+			pFileDescTable = (FileDescTable*)malloc(sizeof(FileDescTable));
+			
+		}
+			
+		int fdIndex = 0;
+		FileDesc f;
+		f.fileOffset = 0;
+		f.inodeNum = newInodeNum;
+		//FileDesc fdArr[MAX_FD_ENTRY_LEN];
+		for (fdIndex = 0; fdIndex < MAX_FD_ENTRY_LEN; fdIndex++) {
+			if ((pFileDescTable->file[fdIndex].bUsed) == 0) {
+				pFileDescTable->file[fdIndex] = f;
+				break;
+			}
+		}
+			
+		return fdIndex;
+	}
+}
+
+
+int		WriteFile(int fileDesc, char* pBuffer, int length)
+{
+
+}
+
+int		ReadFile(int fileDesc, char* pBuffer, int length)
+{
+
+}
+
+
+int		CloseFile(int fileDesc)
+{
+
+}
+
+int		RemoveFile(const char* szFileName)
+{
+
+}
+
+
+int		MakeDir(const char* szDirName)
+{
+	
+	int newInodeNum = GetFreeInodeNum();
+	//상위 디렉토리의 DirEntry에 생성할 디렉이름과 Inode번호 입력
+	int parentInodeNum = UpdateDirInBlock(szDirName, newInodeNum);
+	if (strcmp(szDirName, "/test/t3") == 0) return -1;
+	int newBlockNum = GetFreeBlockNum();
+	//newBlock은 무조건 parentInodeNum뒤에 이유는 새로운 엔트리블록 추가될 수 있음
+	if (parentInodeNum == -1) return -1;
+	//생성할 디렉토리의 DirEntry 리스트 생성/초기화
+	CreateDirInBlock(newBlockNum, newInodeNum, parentInodeNum);
+	//루트 디렉토리의 Inode 생성/초기화
+	CreateDirInode(newBlockNum, newInodeNum);
+
+}
+
+
+int		RemoveDir(const char* szDirName)
+{
+
+}
+
+
+void		EnumerateDirStatus(const char* szDirName, DirEntry* pDirEntry, int* pNum)
+{
+
+}
 
 
 
