@@ -32,7 +32,7 @@ void		Mount(MountType type)
 		SetInodeBitmap(newInodeNum);
 		UpdateNumInodeFSI(1);
 		//루트 디렉토리의 Inode 생성/초기화
-		CreateDirInode(newBlockNum, newInodeNum);
+		CreateDirInode(newBlockNum, newInodeNum, 0);
 
 		DevReadBlock(3, block);
 	}

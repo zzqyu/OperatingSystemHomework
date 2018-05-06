@@ -67,6 +67,9 @@ unsigned char* FillBit(int fillBitSize, int valueByteSize);
 	int inodeNum :: 생성할 항목의 Inode 번호
 	return 설정된 DriEntryItem  */
 DirEntry SetDirEntry(char* name, int inodeNum);
+/*	FileDesc 항목을 설정하는 함수
+ int bUsed, int offset, int inodeNum*/
+FileDesc SetFileDesc(int bUsed, int offset, int inodeNum);
 /*	생성할 디렉토리의 엔트리 리스트를 초기화
 	int blockNo :: 디렉토리 엔트리를 만들 Block No.
 	int thisInodeNo :: 생성하는 디렉토리의 Inode No.
@@ -92,13 +95,15 @@ int UpdateDirInBlock(char* path, int newInodeNum);
 	int blockNum :: 조회할 Block No.
 	char* name :: 항목의 이름
 	int inodeNum :: Inode No.
-	return 1 :: 성공
-	return 0 :: 실패 */
+	return 0이상 :: 성공 추가한Inode No
+	return -1 :: 실패 
+	return 10000+중복항목InodeNo :: 항목명 중복 */
 int SetDirFileNameInBlock(int blockNum, char* name, int inodeNum);
 /*	추가할 항목의 상위디렉토리의 Inode No.를 얻어오는 함수
 	char* path :: 추가 요청한 절대경로
 	int inodeNum :: (최초 실행 시 -1) 조회할 디렉토리의 Inode No.
 	return 추가할 항목의 상위디렉토리의 Inode No.
+	return n<=10000는 중복 항목의 Inode No.
 	return -1 :: 실패*/
 int GetDirInode(char* path, int inodeNum);
 /*	디렉토리의 모든 엔트리 리스트에서 이름과 일치하는 InodeNo 리턴
@@ -119,10 +124,29 @@ int GetInodeNumInAllIndirectDirEntry(char* dirName, int indirectBlockNum);
 	return 디렉이름과 일치하는 InodeNo
 	return -1 :: 실패*/
 int GetInodeNumInDirEntry(char* dirName, int blockNum);
-/* Inode 생성 및 초기화
+/* Inode 생성 및 초기화(directory)
 	int blockNo :: 첫번째 DirEntry가 있는 Block의 No.
-	int thisInodeNo :: 생성하는 Inode 번호*/
-void CreateDirInode(int blockNo, int thisInodeNo);
+	int thisInodeNo :: 생성하는 Inode 번호
+	int isNotRoot :: 생성하는 Inode가 관리하는 디렉토리가 루트가 아닌지 확인*/
+void CreateDirInode(int blockNo, int thisInodeNo, int isNotRoot);
+/* Inode 생성 및 초기화(File)
+int inodeNum :: 생성하는 Inode 번호*/
+void CreateFileInode(int inodeNum);
+/*	Inode가 관리하는 디렉토리의 엔트리에 항목이 추가/삭제될때 수행하는 업데이트
+int inodeNum :: 업데이트 할 Inode No.
+int addSize :: 추가/삭제 여부*/
+void UpdateDirInode(int inodeNum, int isAdd);
+/*	Inode가 관리하는 디렉토리/파일의 사이즈를 업데이트 함
+	int inodeNum :: 업데이트 할 Inode No.
+	int addSize :: 가감할 사이즈*/
+void UpdateSizeOfInode(int inodeNum, int addSize);
+/*	Open후 바로 write하는 경우 또는 file사이즈가 offset보다 클 경우 
+	Inode에 필요없는 부분 날린다. 
+	int offset :: 날리기 시작하는 부분
+	int inodeNum :: 블록을 관리하는 InodeNo. */
+void LoseFileBlock(int offset, int inodeNum);
+
+
 /* FSI 초기화*/
 void InitFileSysInfo();
 /* FSI의 numAllocBlocks, numFreeBlocks 업데이트
@@ -131,6 +155,8 @@ void UpdateNumBlockFSI(int isAdd);
 /* FSI의 numAllocInodes 업데이트
 int isAdd :: 1이면 할당 Inode 1증가, 0이면 1감소*/
 void UpdateNumInodeFSI(int isAdd);
+
+
 /*이 경로의 상위 디렉토리가 루트인지 확인*/
 int isParentRoot(char* path);
 

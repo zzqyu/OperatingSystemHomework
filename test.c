@@ -1,6 +1,8 @@
-#include <string.h>
+﻿#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <locale.h>
+#include <wchar.h>
 
 #include "fs.h"
 
@@ -42,20 +44,20 @@ void test(char* path) {
 void main() {
 	//char path[128] = "/a.c";///sdasda/asdasd/dfsdf";
 	//test(path);
-	Mount(MT_TYPE_FORMAT);
+	int fd1, fd2;
 	
 	//PrintDirEntryList(19);
-	
+	Mount(MT_TYPE_FORMAT);
 	MakeDir("/test");
 	MakeDir("/test2");
-	printf("fd = %d\n", OpenFile("/a.c", OPEN_FLAG_CREATE));
+	printf("fd1 = %d\n", fd1=OpenFile("/a.c", OPEN_FLAG_CREATE));
 	MakeDir("/test3");
 	MakeDir("/test4");
 	MakeDir("/test5");
 	MakeDir("/test6");
 	MakeDir("/test7");
 	MakeDir("/test7/test8");
-	printf("fd = %d\n", OpenFile("/test7/b.c", OPEN_FLAG_CREATE));
+	printf("fd1 = %d\n", fd2=OpenFile("/test7/b.c", OPEN_FLAG_CREATE));
 
 	
 	PrintInode(0);
@@ -80,4 +82,29 @@ void main() {
 	PrintDirEntryList(28);
 	PrintDirEntryList(29);
 	PrintDirEntryList(30);
+	setlocale(LC_ALL, "");
+	printf("=========================\n");
+	printf("%ls", L"한글");
+	printf("\n");
+	char result[] = "wadjaksasdkjasslsajasasladlasclkxjxiojdslckslx";//"가나다라마바사아자차카타파하하가나다라마바사아자차카타파하";
+	char result1[] = "sdkjsd!!!!!!!!!!!!!!!";//"시바바시바바시바바시바바";
+	int leng = WriteFile(fd1, result, strlen(result));
+	printf("WriteFile leng = %d, WriteString = %s \n", leng, result);
+	leng = WriteFile(fd1, result1, strlen(result1));
+	printf("WriteFile leng = %d, WriteString = %s \n", leng, result1);
+	printf("WriteStringBit = %s\n", BlockToBinary(64, result));
+	CloseFile(fd1);
+	printf("Openfile fd1 = %d\n", fd1 = OpenFile("/a.c", OPEN_FLAG_READWRITE));
+	char* result2 = (char*)malloc(69);
+	printf("리드전\n");
+	leng = ReadFile(fd1, result2, strlen(result)+ strlen(result1));
+	printf("Read result = '" );
+	//result2[46] = '!';
+	printf("%s", result2);
+	printf("' ReadFile leng = %d\n", leng);
+	//printf(" ReadStringBit = %s\n", BlockToBinary(64, result1));
+
+	CloseFile(fd1);
+	
+	return;
 }
