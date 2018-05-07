@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "Disk.h"
+#include "disk.h"
 #include "fs.h"
 #include "own_func.h"
 
@@ -12,7 +12,7 @@ void FileSysInit(void)
 {
 	DevCreateDisk();
 
-    //hw1 int dataRegionFirstIndex = INODELIST_BLK_FIRST + INODELIST_BLKS;
+    //hw1 int dataRegionFirstIndex = INODELIST_BLOCK_FIRST + INODELIST_BLOCKS;
 	int numBlock = BLOCK_SIZE * NUM_BIT_OF_BYTE;
 
     //디스크 메모리 할당
@@ -30,22 +30,22 @@ void FileSysInit(void)
 /*Inode 비트맵의 특정 순서의 비트를 1로 설정
 int inodeno: Inode 순서*/
 void SetInodeBitmap(int inodeno){
-    SetBitmap(INODE_BITMAP_BLK_NUM,inodeno,(unsigned char)1);
+    SetBitmap(INODE_BITMAP_BLOCK_NUM,inodeno,(unsigned char)1);
 }
 /*Inode 비트맵의 특정 순서의 비트를 0로 설정
 int inodeno: Inode 순서*/
 void ResetInodeBitmap(int inodeno){
-    SetBitmap(INODE_BITMAP_BLK_NUM,inodeno,(unsigned char)0);
+    SetBitmap(INODE_BITMAP_BLOCK_NUM,inodeno,(unsigned char)0);
 }
 /*Block 비트맵의 특정 순서의 비트를 1로 설정
 int blkno: Block 순서*/
 void SetBlockBitmap(int blkno){
-    SetBitmap(BLOCK_BITMAP_BLK_NUM,blkno,(unsigned char)1);
+    SetBitmap(BLOCK_BITMAP_BLOCK_NUM,blkno,(unsigned char)1);
 }
 /*Block 비트맵의 특정 순서의 비트를 0로 설정
 int blkno: Block 순서*/
 void ResetBlockBitmap(int blkno){
-    SetBitmap(BLOCK_BITMAP_BLK_NUM,blkno,(unsigned char)0);
+    SetBitmap(BLOCK_BITMAP_BLOCK_NUM,blkno,(unsigned char)0);
 }
 
 /*blkno번째 Inode에 데이터를 넣는다
@@ -65,22 +65,23 @@ void GetInode(int inodeno, Inode* pInode)
 /*할당되지 않은 inode 번호를 획득한다. */
 int GetFreeInodeNum(void)
 {
-	GetFreeNum(INODE_BITMAP_BLK_NUM);
+	GetFreeNum(INODE_BITMAP_BLOCK_NUM);
 }
 
 /*할당되지 않은 block 번호를 획득한다. */
 int GetFreeBlockNum(void)
 {
-	return GetFreeNum(BLOCK_BITMAP_BLK_NUM);
+	return GetFreeNum(BLOCK_BITMAP_BLOCK_NUM);
 }
 
 //구현할 소스
 
 int		OpenFile(const char* szFileName, OpenFlag flag)
 {
+
 	//상위 디렉토리의 DirEntry에 생성/오픈할 파일이름과 Inode번호 입력
 	int newInodeNum = GetFreeInodeNum();
-	int parentInodeNum = UpdateDirInBlock(szFileName, newInodeNum);
+	int parentInodeNum = UpdateDirInBlock((char*)szFileName, newInodeNum, flag);
 	//printf("[OpenFile] szFileName=%s   parentInodeNum = %d\n", szFileName, parentInodeNum);
 	
 	int fileInode = -10000;
@@ -153,9 +154,9 @@ int		WriteFile(int fileDesc, char* pBuffer, int length)
 
 	int* indirectBlockNumList = NULL; //인다이렉트블록인덱스 리스트
 	//인다이렉트블록이 존재하는 경우 리스트로드
-	if (inode->indirBlkPointer > -1) {
+	if (inode->indirBlockPtr > -1) {
 		indirectBlockNumList = (int*)malloc(BLOCK_SIZE);
-		DevReadBlock(inode->indirBlkPointer, (char*)indirectBlockNumList);
+		DevReadBlock(inode->indirBlockPtr, (char*)indirectBlockNumList);
 	}
 	for (int i = startLogicalBlockNum; i <= endLogicalBlockNum; i++) {
 		int blockStartByte = 0;
@@ -164,29 +165,29 @@ int		WriteFile(int fileDesc, char* pBuffer, int length)
 		
 
 		//인다이렉트 진입 순서인 경우
-		if (i == NUM_OF_DIRECT_BLK_PTR && inode->indirBlkPointer == -1) {
-			inode->indirBlkPointer = CreateIndirectBlock();
+		if (i == NUM_OF_DIRECT_BLOCK_PTR && inode->indirBlockPtr == -1) {
+			inode->indirBlockPtr = CreateIndirectBlock();
 			indirectBlockNumList = (int*)malloc(BLOCK_SIZE);
-			DevReadBlock(inode->indirBlkPointer, (char*)indirectBlockNumList);
+			DevReadBlock(inode->indirBlockPtr, (char*)indirectBlockNumList);
 		}
 		
 
 		//다이렉트블록인 경우 
-		if (i < NUM_OF_DIRECT_BLK_PTR) {
-			blockNum = inode->dirBlkPtr[i];
+		if (i < NUM_OF_DIRECT_BLOCK_PTR) {
+			blockNum = inode->dirBlockPtr[i];
 		}//인다이렉트 블록인경우
 		else
-			blockNum = indirectBlockNumList[i - NUM_OF_DIRECT_BLK_PTR];
+			blockNum = indirectBlockNumList[i - NUM_OF_DIRECT_BLOCK_PTR];
 		
 
 		// 블록번호가 inode에 할당된게 없으면 할당해 준다. 
 		if (blockNum == -1) {
 			blockNum = GetFreeBlockNum();
-			if (i < NUM_OF_DIRECT_BLK_PTR) {
-				inode->dirBlkPtr[i] = blockNum;
+			if (i < NUM_OF_DIRECT_BLOCK_PTR) {
+				inode->dirBlockPtr[i] = blockNum;
 			}
 			else {
-				indirectBlockNumList[i- NUM_OF_DIRECT_BLK_PTR] = blockNum;
+				indirectBlockNumList[i- NUM_OF_DIRECT_BLOCK_PTR] = blockNum;
 			}
 		}
 		
@@ -217,7 +218,7 @@ int		WriteFile(int fileDesc, char* pBuffer, int length)
 
 	}
 	if (indirectBlockNumList != NULL) {
-		DevWriteBlock(inode->indirBlkPointer, indirectBlockNumList);
+		DevWriteBlock(inode->indirBlockPtr, (char*)indirectBlockNumList);
 		free(indirectBlockNumList);
 	}
 	inode->size = offset + length;
@@ -251,9 +252,9 @@ int		ReadFile(int fileDesc, char* pBuffer, int length)
 	int endByteInEndLogicalBlockNum = (offset + length) % BLOCK_SIZE;
 	
 	int* indirectIndexList = NULL;
-	if (inode->indirBlkPointer > -1) {
+	if (inode->indirBlockPtr > -1) {
 		indirectIndexList = (int*)malloc(BLOCK_SIZE);
-		DevReadBlock(inode->indirBlkPointer, indirectIndexList);
+		DevReadBlock(inode->indirBlockPtr, (char*)indirectIndexList);
 	}
 
 	for (int i = startLogicalBlockNum; i <= endLogicalBlockNum; i++) {
@@ -262,14 +263,14 @@ int		ReadFile(int fileDesc, char* pBuffer, int length)
 		int blockCpySize = BLOCK_SIZE;
 
 		//다이렉트블록인 경우 
-		if (i < NUM_OF_DIRECT_BLK_PTR)
-			blockNum = inode->dirBlkPtr[i];
-		else if (i == NUM_OF_DIRECT_BLK_PTR) {
-			if (inode->indirBlkPointer == -1) break;
-			blockNum = indirectIndexList[i - NUM_OF_DIRECT_BLK_PTR];
+		if (i < NUM_OF_DIRECT_BLOCK_PTR)
+			blockNum = inode->dirBlockPtr[i];
+		else if (i == NUM_OF_DIRECT_BLOCK_PTR) {
+			if (inode->indirBlockPtr == -1) break;
+			blockNum = indirectIndexList[i - NUM_OF_DIRECT_BLOCK_PTR];
 		}
 		else
-			blockNum = indirectIndexList[i - NUM_OF_DIRECT_BLK_PTR];
+			blockNum = indirectIndexList[i - NUM_OF_DIRECT_BLOCK_PTR];
 
 		if (blockNum == -1) break;
 
@@ -304,7 +305,7 @@ int		CloseFile(int fileDesc){
 
 int		RemoveFile(const char* szFileName)
 {
-
+	return RemoveItem((char*)szFileName, FILE_TYPE_FILE);
 }
 
 
@@ -313,7 +314,7 @@ int		MakeDir(const char* szDirName)
 	
 	int newInodeNum = GetFreeInodeNum();
 	//상위 디렉토리의 DirEntry에 생성할 디렉이름과 Inode번호 입력
-	int parentInodeNum = UpdateDirInBlock(szDirName, newInodeNum);
+	int parentInodeNum = UpdateDirInBlock((char*)szDirName, newInodeNum, 1);
 	
 	//새로 생성할 항목이 중복이거나 생성할 수 없으면 -1
 	if (parentInodeNum >= 10000 || parentInodeNum == -1) return -1;
@@ -329,15 +330,34 @@ int		MakeDir(const char* szDirName)
 
 int		RemoveDir(const char* szDirName)
 {
-
+	return RemoveItem((char*)szDirName, FILE_TYPE_DIR);
 }
 
-
-void		EnumerateDirStatus(const char* szDirName, DirEntry* pDirEntry, int* pNum)
+int			EnumerateDirStatus(const char * szDirName, DirEntryInfo * pDirEntry, int dirEntrys)
 {
 
+	char* dirName = (char*)malloc(strlen(szDirName) + 2);
+	strcpy(dirName, szDirName);
+	if (strcmp(dirName, "/") == 0) strcpy(dirName, "/.");
+	//상위 디렉토리의 DirEntry에서 접근할 디렉의 Inode번호 가져오기
+	int dirInodeNum = -10000;
+	int count = -1;
+	int resultFunc;
+
+	//if ((resultFunc = UpdateDirInBlock(dirName, -1, 0)) < 10000) {
+	if ((dirInodeNum = GetDirInode(dirName, -1)) < 0) {
+		
+		pDirEntry = NULL;
+	}
+	else {
+		//dirInodeNum += resultFunc;
+		if (GetItemType(dirInodeNum) == FILE_TYPE_DIR) {
+			int noMean[] = { 0 };
+			DirEntryInfo* temp = GetDirEntryInfoList(dirInodeNum, &count, NULL, noMean);
+			if (count > dirEntrys)count = dirEntrys;
+			memcpy(pDirEntry, temp, sizeof(DirEntryInfo)*count);
+			free(temp);
+		}
+	}
+	return count;
 }
-
-
-
-

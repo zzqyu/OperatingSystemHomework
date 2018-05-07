@@ -1,4 +1,4 @@
-#ifndef __OWN_FUNC_H__
+ï»¿#ifndef __OWN_FUNC_H__
 #define __OWN_FUNC_H__
 
 #include <stdlib.h>
@@ -12,156 +12,171 @@
 //#define DATA_REGION_FIRST  7 /* the first block no. of data region*/
 //#define INODE_SIZE  64 /* size(byte) of Inode*/
 
-//#define INODE_NUM_OF_BLOCK 4 /*ÇÑ ºí·Ï¿¡ µé¾î°¡´Â inode°³¼ö*/
-//#define INODE_ITEM_NUM  INODE_NUM_OF_BLOCK*INODELIST_BLKS /*Inode °¹¼ö*/
+//#define INODE_NUM_OF_BLOCK 4 /*í•œ ë¸”ë¡ì— ë“¤ì–´ê°€ëŠ” inodeê°œìˆ˜*/
+//#define INODE_ITEM_NUM  INODE_NUM_OF_BLOCK*INODELIST_BLKS /*Inode ê°¯ìˆ˜*/
 
-/*bit³»¿ëÀ» ¹è¿­·Î ¹Ù²ã ¸®ÅÏ
-int digitSize: ¸îÀÚ¸®¼ö±îÁö Ãâ·ÂÇÏ´ÂÁö.. , unsigned char* b: Ãâ·ÂÇÒ º¯¼ö*/
+/*bitë‚´ìš©ì„ ë°°ì—´ë¡œ ë°”ê¿” ë¦¬í„´
+int digitSize: ëª‡ìë¦¬ìˆ˜ê¹Œì§€ ì¶œë ¥í•˜ëŠ”ì§€.. , unsigned char* b: ì¶œë ¥í•  ë³€ìˆ˜*/
 unsigned char* BlockToBinary(int digitSize, unsigned char* b);
 
-/*inodeSeq¹øÂ° ³ëµå¸¦ get, put
-int inodeSeq: ³ëµåÀÇ ¼ø¼­, Inode* pInode: »ç¿ëÇÒ Inode, char isGet: GetÇÏ·Á¸é 1 PutÇÏ·Á¸é 0*/
+/*inodeSeqë²ˆì§¸ ë…¸ë“œë¥¼ get, put
+int inodeSeq: ë…¸ë“œì˜ ìˆœì„œ, Inode* pInode: ì‚¬ìš©í•  Inode, char isGet: Getí•˜ë ¤ë©´ 1 Putí•˜ë ¤ë©´ 0*/
 void GPInode(int inodeSeq, Inode* pInode, char isGet);
 
-/*blkno¹øÂ° ºí·Ï¿¡¼­ Ã¹¹øÂ°·Î 0ÀÎ bitÀÎµ¦½º¹øÈ£ ¸®ÅÏ
-int blkno: Á¢±ÙÇÒ ºí·Ï¹øÈ£*/
+/*blknoë²ˆì§¸ ë¸”ë¡ì—ì„œ ì²«ë²ˆì§¸ë¡œ 0ì¸ bitì¸ë±ìŠ¤ë²ˆí˜¸ ë¦¬í„´
+int blkno: ì ‘ê·¼í•  ë¸”ë¡ë²ˆí˜¸*/
 int GetFreeNum(int blkno);
 
-/* ºñÆ®¸Ê ºí·ÏÀÇ ¾î¶² ÀÎµ¦½º¿¡ Á¢±ÙÇØ 0ÀÌ³ª 1·Î ¼¼ÆÃÇÔ.
-int blkno: Á¢±ÙÇÒ ºí·Ï¹øÈ£, int bitmapIndex: ºñÆ®¸ÊÀÇ ÀÎµ¦½º¹øÈ£, unsigned char bit: */
+/* ë¹„íŠ¸ë§µ ë¸”ë¡ì˜ ì–´ë–¤ ì¸ë±ìŠ¤ì— ì ‘ê·¼í•´ 0ì´ë‚˜ 1ë¡œ ì„¸íŒ…í•¨.
+int blkno: ì ‘ê·¼í•  ë¸”ë¡ë²ˆí˜¸, int bitmapIndex: ë¹„íŠ¸ë§µì˜ ì¸ë±ìŠ¤ë²ˆí˜¸, unsigned char bit: */
 void SetBitmap(int blkno, int bitmapIndex, unsigned char bit);
 
 /* Operation <<  : target << manyShiftBit
-unsigned char* target: ¿¬»êÇÒ ´ë»ó, int targetByteSize: ¿¬»êÇÒ ´ë»óÀÇ byte size, int manyShiftBit: ¸îºñÆ®¾¿ ½ÃÇÁÆ®ÇÒÁö*/
+unsigned char* target: ì—°ì‚°í•  ëŒ€ìƒ, int targetByteSize: ì—°ì‚°í•  ëŒ€ìƒì˜ byte size, int manyShiftBit: ëª‡ë¹„íŠ¸ì”© ì‹œí”„íŠ¸í• ì§€*/
 unsigned char* LeftShift(unsigned char* target, int targetByteSize, int manyShiftBit);
 
 /* Operation >>  : target >> manyShiftBit
-unsigned char* target: ¿¬»êÇÒ ´ë»ó, int targetByteSize: ¿¬»êÇÒ ´ë»óÀÇ byte size, int manyShiftBit: ¸îºñÆ®¾¿ ½ÃÇÁÆ®ÇÒÁö*/
+unsigned char* target: ì—°ì‚°í•  ëŒ€ìƒ, int targetByteSize: ì—°ì‚°í•  ëŒ€ìƒì˜ byte size, int manyShiftBit: ëª‡ë¹„íŠ¸ì”© ì‹œí”„íŠ¸í• ì§€*/
 unsigned char* RightShift(unsigned char* target, int targetByteSize, int manyShiftBit);
 
 /* Operation |=
-lValue |= rValue , int valueByteSize : ¹ÙÀÌÆ® Å©±â */
+lValue |= rValue , int valueByteSize : ë°”ì´íŠ¸ í¬ê¸° */
 void OrEqual(unsigned char * lValue, unsigned char * rValue, int valueByteSize);
 
 /* Operation &=
-lValue &= rValue , int valueByteSize : ¹ÙÀÌÆ® Å©±â */
+lValue &= rValue , int valueByteSize : ë°”ì´íŠ¸ í¬ê¸° */
 void AndEqual(unsigned char * lValue, unsigned char * rValue, int valueByteSize);
 
 /* Operation |
-lValue | rValue , int valueByteSize : ¹ÙÀÌÆ® Å©±â */
+lValue | rValue , int valueByteSize : ë°”ì´íŠ¸ í¬ê¸° */
 unsigned char* OperOr(unsigned char* value1, unsigned char* value2, int valueByteSize);
 
 /* Operation &
-lValue & rValue , int valueByteSize : ¹ÙÀÌÆ® Å©±â */
+lValue & rValue , int valueByteSize : ë°”ì´íŠ¸ í¬ê¸° */
 unsigned char* OperAnd(unsigned char* value1, unsigned char* value2, int valueByteSize);
 
 /* Operation (1 << fillBitSize) -1
-(1 << fillBitSize) -1 , int valueByteSize : ¹ÙÀÌÆ® Å©±â */
+(1 << fillBitSize) -1 , int valueByteSize : ë°”ì´íŠ¸ í¬ê¸° */
 unsigned char* FillBit(int fillBitSize, int valueByteSize);
 
 
 //=======================HW2 ZONE =============================
 
-/*	DirEntry Ç×¸ñÀ» ¼³Á¤ÇÏ´Â ÇÔ¼ö
-	char* name :: »ı¼ºÇÒ Ç×¸ñ(µğ·ºÅä¸®/ÆÄÀÏ) ÀÌ¸§
-	int inodeNum :: »ı¼ºÇÒ Ç×¸ñÀÇ Inode ¹øÈ£
-	return ¼³Á¤µÈ DriEntryItem  */
+/*	DirEntry í•­ëª©ì„ ì„¤ì •í•˜ëŠ” í•¨ìˆ˜
+	char* name :: ìƒì„±í•  í•­ëª©(ë””ë ‰í† ë¦¬/íŒŒì¼) ì´ë¦„
+	int inodeNum :: ìƒì„±í•  í•­ëª©ì˜ Inode ë²ˆí˜¸
+	return ì„¤ì •ëœ DriEntryItem  */
 DirEntry SetDirEntry(char* name, int inodeNum);
-/*	FileDesc Ç×¸ñÀ» ¼³Á¤ÇÏ´Â ÇÔ¼ö
+/*	FileDesc í•­ëª©ì„ ì„¤ì •í•˜ëŠ” í•¨ìˆ˜
  int bUsed, int offset, int inodeNum*/
 FileDesc SetFileDesc(int bUsed, int offset, int inodeNum);
-/*	»ı¼ºÇÒ µğ·ºÅä¸®ÀÇ ¿£Æ®¸® ¸®½ºÆ®¸¦ ÃÊ±âÈ­
-	int blockNo :: µğ·ºÅä¸® ¿£Æ®¸®¸¦ ¸¸µé Block No.
-	int thisInodeNo :: »ı¼ºÇÏ´Â µğ·ºÅä¸®ÀÇ Inode No.
-	int parentInodeNo :: »óÀ§ µğ·ºÅä¸®ÀÇ Inode No.
+/*	ìƒì„±í•  ë””ë ‰í† ë¦¬ì˜ ì—”íŠ¸ë¦¬ ë¦¬ìŠ¤íŠ¸ë¥¼ ì´ˆê¸°í™”
+	int blockNo :: ë””ë ‰í† ë¦¬ ì—”íŠ¸ë¦¬ë¥¼ ë§Œë“¤ Block No.
+	int thisInodeNo :: ìƒì„±í•˜ëŠ” ë””ë ‰í† ë¦¬ì˜ Inode No.
+	int parentInodeNo :: ìƒìœ„ ë””ë ‰í† ë¦¬ì˜ Inode No.
 	return void */
 void CreateDirInBlock(int blockNo, int thisInodeNo, int parentInodeNo);
-/*	Indirect Block »ı¼º ¹× ÃÊ±âÈ­
-	return »ı¼ºµÈ Indirect BlockÀÇ Block No.*/
+/*	Indirect Block ìƒì„± ë° ì´ˆê¸°í™”
+	return ìƒì„±ëœ Indirect Blockì˜ Block No.*/
 int CreateIndirectBlock();
-/*	Second Direct Block »ı¼º ¹× ÃÊ±âÈ­
-	return »ı¼ºµÈ Seocond Direct BlockÀÇ Block No.*/
+/*	Second Direct Block ìƒì„± ë° ì´ˆê¸°í™”
+	return ìƒì„±ëœ Seocond Direct Blockì˜ Block No.*/
 int AddDirEntry();
-/*	»ı¼ºÇÒ Ç×¸ñ(µğ·ºÅä¸®/ÆÄÀÏ)ÀÇ »óÀ§ µğ·ºÅä¸®ÀÇ ¿£Æ®¸®¸¦ 
-	·çÆ®ºÎÅÍ ¼øÂ÷ÀûÀ¸·Î Ã£¾Æ¼­ ÀÌ¸§, Inode¹øÈ£±â·Ï
-	char* path :: »ı¼ºÇÒ Ç×¸ñÀÇ Àı´ë°æ·Î
-	int newInodeNum :: »ı¼ºÇÒ Ç×¸ñ¿¡ ¹èÁ¤ÇÒ Inode No.
-	return 0ÀÌ»ó :: »óÀ§ µğ·ºÅä¸®ÀÇ Inode¹øÈ£
-	return -1 :: ½ÇÆĞ
-*/
-int UpdateDirInBlock(char* path, int newInodeNum);
-/*	ÇØ´ç ºí·ÏÀÇ Dir Entry List¿¡ ºó °÷ÀÌ ÀÖÀ¸¸é
-	»ı¼ºÇÒ ÀÌ¸§, Inode¹øÈ£±â·Ï
-	int blockNum :: Á¶È¸ÇÒ Block No.
-	char* name :: Ç×¸ñÀÇ ÀÌ¸§
+/*	ìƒì„±í•  í•­ëª©(ë””ë ‰í† ë¦¬/íŒŒì¼)ì˜ ìƒìœ„ ë””ë ‰í† ë¦¬ì˜ ì—”íŠ¸ë¦¬ë¥¼ 
+	ë£¨íŠ¸ë¶€í„° ìˆœì°¨ì ìœ¼ë¡œ ì°¾ì•„ì„œ ì´ë¦„, Inodeë²ˆí˜¸ê¸°ë¡
+	char* path :: ìƒì„±í•  í•­ëª©ì˜ ì ˆëŒ€ê²½ë¡œ
+	int newInodeNum :: ìƒì„±í•  í•­ëª©ì— ë°°ì •í•  Inode No.
+	int isUpdate :: ì—…ë°ì´íŠ¸ë¥¼ í• ê±´ì§€, ì¤‘ë³µê²€ì‚¬ë§Œ í• ê±´ì§€
+	return 0ì´ìƒ :: ìƒìœ„ ë””ë ‰í† ë¦¬ì˜ Inodeë²ˆí˜¸
+	return -1 :: ì‹¤íŒ¨
+	return 10000+ì¤‘ë³µí•­ëª©InodeNo :: í•­ëª©ëª… ì¤‘ë³µ */
+int UpdateDirInBlock(char* path, int newInodeNum, int isUpdate);
+/*	í•´ë‹¹ ë¸”ë¡ì˜ Dir Entry Listì— ë¹ˆ ê³³ì´ ìˆìœ¼ë©´
+	ìƒì„±í•  ì´ë¦„, Inodeë²ˆí˜¸ê¸°ë¡
+	int blockNum :: ì¡°íšŒí•  Block No.
+	char* name :: í•­ëª©ì˜ ì´ë¦„
 	int inodeNum :: Inode No.
-	return 0ÀÌ»ó :: ¼º°ø Ãß°¡ÇÑInode No
-	return -1 :: ½ÇÆĞ 
-	return 10000+Áßº¹Ç×¸ñInodeNo :: Ç×¸ñ¸í Áßº¹ */
-int SetDirFileNameInBlock(int blockNum, char* name, int inodeNum);
-/*	Ãß°¡ÇÒ Ç×¸ñÀÇ »óÀ§µğ·ºÅä¸®ÀÇ Inode No.¸¦ ¾ò¾î¿À´Â ÇÔ¼ö
-	char* path :: Ãß°¡ ¿äÃ»ÇÑ Àı´ë°æ·Î
-	int inodeNum :: (ÃÖÃÊ ½ÇÇà ½Ã -1) Á¶È¸ÇÒ µğ·ºÅä¸®ÀÇ Inode No.
-	return Ãß°¡ÇÒ Ç×¸ñÀÇ »óÀ§µğ·ºÅä¸®ÀÇ Inode No.
-	return n<=10000´Â Áßº¹ Ç×¸ñÀÇ Inode No.
-	return -1 :: ½ÇÆĞ*/
+	int isUpdate :: ì—…ë°ì´íŠ¸ë¥¼ í• ê±´ì§€, ì¤‘ë³µê²€ì‚¬ë§Œ í• ê±´ì§€
+	return 0ì´ìƒ :: ì„±ê³µ ì¶”ê°€í•œInode No
+	return -1 :: ì‹¤íŒ¨ 
+	return 10000+ì¤‘ë³µí•­ëª©InodeNo :: í•­ëª©ëª… ì¤‘ë³µ */
+int SetDirFileNameInBlock(int blockNum, char* name, int inodeNum, int isUpdate);
+/*	ì¶”ê°€í•  í•­ëª©ì˜ ìƒìœ„ë””ë ‰í† ë¦¬ì˜ Inode No.ë¥¼ ì–»ì–´ì˜¤ëŠ” í•¨ìˆ˜
+	char* path :: ì¶”ê°€ ìš”ì²­í•œ ì ˆëŒ€ê²½ë¡œ
+	int inodeNum :: (ìµœì´ˆ ì‹¤í–‰ ì‹œ -1) ì¡°íšŒí•  ë””ë ‰í† ë¦¬ì˜ Inode No.
+	return ì¶”ê°€í•  í•­ëª©ì˜ ìƒìœ„ë””ë ‰í† ë¦¬ì˜ Inode No.
+	return -1 :: ì‹¤íŒ¨*/
 int GetDirInode(char* path, int inodeNum);
-/*	µğ·ºÅä¸®ÀÇ ¸ğµç ¿£Æ®¸® ¸®½ºÆ®¿¡¼­ ÀÌ¸§°ú ÀÏÄ¡ÇÏ´Â InodeNo ¸®ÅÏ
-	char* dirName :: °Ë»öÇÒ µğ·ºÅä¸® ¸®ÅÏ
-	int inodeNum :: °Ë»çÇÏ´Â µğ·ºÅä¸®ÀÇ Inode No.
-	return µğ·ºÀÌ¸§°ú ÀÏÄ¡ÇÏ´Â InodeNo
-	return -1 :: ½ÇÆĞ*/
+/*	ë””ë ‰í† ë¦¬ì˜ ëª¨ë“  ì—”íŠ¸ë¦¬ ë¦¬ìŠ¤íŠ¸ì—ì„œ ì´ë¦„ê³¼ ì¼ì¹˜í•˜ëŠ” InodeNo ë¦¬í„´
+	char* dirName :: ê²€ìƒ‰í•  ë””ë ‰í† ë¦¬ ë¦¬í„´
+	int inodeNum :: ê²€ì‚¬í•˜ëŠ” ë””ë ‰í† ë¦¬ì˜ Inode No.
+	return ë””ë ‰ì´ë¦„ê³¼ ì¼ì¹˜í•˜ëŠ” InodeNo
+	return -1 :: ì‹¤íŒ¨*/
 int GetInodeNumInAllDirEntry(char* dirName, int inodeNum);
-/*	µğ·ºÅä¸®ÀÇ ¸ğµç Indirect ¿£Æ®¸®¸®½ºÆ®¿¡¼­ ÀÌ¸§°ú ÀÏÄ¡ÇÏ´Â InodeNo ¸®ÅÏ
-	char* dirName :: °Ë»öÇÒ µğ·ºÅä¸® ¸®ÅÏ
-	int indirectBlockNum :: °Ë»çÇÏ´Â ÀÎ´ÙÀÌ·ºÆ® index blockÀÇ Inode No.
-	return µğ·ºÀÌ¸§°ú ÀÏÄ¡ÇÏ´Â InodeNo
-	return -1 :: ½ÇÆĞ*/
+/*	ë””ë ‰í† ë¦¬ì˜ ëª¨ë“  Indirect ì—”íŠ¸ë¦¬ë¦¬ìŠ¤íŠ¸ì—ì„œ ì´ë¦„ê³¼ ì¼ì¹˜í•˜ëŠ” InodeNo ë¦¬í„´
+	char* dirName :: ê²€ìƒ‰í•  ë””ë ‰í† ë¦¬ ë¦¬í„´
+	int indirectBlockNum :: ê²€ì‚¬í•˜ëŠ” ì¸ë‹¤ì´ë ‰íŠ¸ index blockì˜ Inode No.
+	return ë””ë ‰ì´ë¦„ê³¼ ì¼ì¹˜í•˜ëŠ” InodeNo
+	return -1 :: ì‹¤íŒ¨*/
 int GetInodeNumInAllIndirectDirEntry(char* dirName, int indirectBlockNum);
-/*	ÇÑ ºí·ÏÀÇ ¸ğµç ¿£Æ®¸®¸®½ºÆ®¿¡¼­ ÀÌ¸§°ú ÀÏÄ¡ÇÏ´Â InodeNo ¸®ÅÏ
-	char* dirName :: °Ë»öÇÒ µğ·ºÅä¸® ¸®ÅÏ
-	int inodeNum :: °Ë»çÇÏ´Â µğ·ºÅä¸®ÀÇ Inode No.
-	return µğ·ºÀÌ¸§°ú ÀÏÄ¡ÇÏ´Â InodeNo
-	return -1 :: ½ÇÆĞ*/
+/*	í•œ ë¸”ë¡ì˜ ëª¨ë“  ì—”íŠ¸ë¦¬ë¦¬ìŠ¤íŠ¸ì—ì„œ ì´ë¦„ê³¼ ì¼ì¹˜í•˜ëŠ” InodeNo ë¦¬í„´
+	char* dirName :: ê²€ìƒ‰í•  ë””ë ‰í† ë¦¬ ë¦¬í„´
+	int inodeNum :: ê²€ì‚¬í•˜ëŠ” ë””ë ‰í† ë¦¬ì˜ Inode No.
+	return ë””ë ‰ì´ë¦„ê³¼ ì¼ì¹˜í•˜ëŠ” InodeNo
+	return -1 :: ì‹¤íŒ¨*/
 int GetInodeNumInDirEntry(char* dirName, int blockNum);
-/* Inode »ı¼º ¹× ÃÊ±âÈ­(directory)
-	int blockNo :: Ã¹¹øÂ° DirEntry°¡ ÀÖ´Â BlockÀÇ No.
-	int thisInodeNo :: »ı¼ºÇÏ´Â Inode ¹øÈ£
-	int isNotRoot :: »ı¼ºÇÏ´Â Inode°¡ °ü¸®ÇÏ´Â µğ·ºÅä¸®°¡ ·çÆ®°¡ ¾Æ´ÑÁö È®ÀÎ*/
+/* Inode ìƒì„± ë° ì´ˆê¸°í™”(directory)
+	int blockNo :: ì²«ë²ˆì§¸ DirEntryê°€ ìˆëŠ” Blockì˜ No.
+	int thisInodeNo :: ìƒì„±í•˜ëŠ” Inode ë²ˆí˜¸
+	int isNotRoot :: ìƒì„±í•˜ëŠ” Inodeê°€ ê´€ë¦¬í•˜ëŠ” ë””ë ‰í† ë¦¬ê°€ ë£¨íŠ¸ê°€ ì•„ë‹Œì§€ í™•ì¸*/
 void CreateDirInode(int blockNo, int thisInodeNo, int isNotRoot);
-/* Inode »ı¼º ¹× ÃÊ±âÈ­(File)
-int inodeNum :: »ı¼ºÇÏ´Â Inode ¹øÈ£*/
+/* Inode ìƒì„± ë° ì´ˆê¸°í™”(File)
+int inodeNum :: ìƒì„±í•˜ëŠ” Inode ë²ˆí˜¸*/
 void CreateFileInode(int inodeNum);
-/*	Inode°¡ °ü¸®ÇÏ´Â µğ·ºÅä¸®ÀÇ ¿£Æ®¸®¿¡ Ç×¸ñÀÌ Ãß°¡/»èÁ¦µÉ¶§ ¼öÇàÇÏ´Â ¾÷µ¥ÀÌÆ®
-int inodeNum :: ¾÷µ¥ÀÌÆ® ÇÒ Inode No.
-int addSize :: Ãß°¡/»èÁ¦ ¿©ºÎ*/
+/*	Inodeê°€ ê´€ë¦¬í•˜ëŠ” ë””ë ‰í† ë¦¬ì˜ ì—”íŠ¸ë¦¬ì— í•­ëª©ì´ ì¶”ê°€/ì‚­ì œë ë•Œ ìˆ˜í–‰í•˜ëŠ” ì—…ë°ì´íŠ¸
+int inodeNum :: ì—…ë°ì´íŠ¸ í•  Inode No.
+int addSize :: ì¶”ê°€/ì‚­ì œ ì—¬ë¶€*/
 void UpdateDirInode(int inodeNum, int isAdd);
-/*	Inode°¡ °ü¸®ÇÏ´Â µğ·ºÅä¸®/ÆÄÀÏÀÇ »çÀÌÁî¸¦ ¾÷µ¥ÀÌÆ® ÇÔ
-	int inodeNum :: ¾÷µ¥ÀÌÆ® ÇÒ Inode No.
-	int addSize :: °¡°¨ÇÒ »çÀÌÁî*/
+/*	Inodeê°€ ê´€ë¦¬í•˜ëŠ” ë””ë ‰í† ë¦¬/íŒŒì¼ì˜ ì‚¬ì´ì¦ˆë¥¼ ì—…ë°ì´íŠ¸ í•¨
+	int inodeNum :: ì—…ë°ì´íŠ¸ í•  Inode No.
+	int addSize :: ê°€ê°í•  ì‚¬ì´ì¦ˆ*/
 void UpdateSizeOfInode(int inodeNum, int addSize);
-/*	OpenÈÄ ¹Ù·Î writeÇÏ´Â °æ¿ì ¶Ç´Â file»çÀÌÁî°¡ offsetº¸´Ù Å¬ °æ¿ì 
-	Inode¿¡ ÇÊ¿ä¾ø´Â ºÎºĞ ³¯¸°´Ù. 
-	int offset :: ³¯¸®±â ½ÃÀÛÇÏ´Â ºÎºĞ
-	int inodeNum :: ºí·ÏÀ» °ü¸®ÇÏ´Â InodeNo. */
+/*	Opení›„ ë°”ë¡œ writeí•˜ëŠ” ê²½ìš° ë˜ëŠ” fileì‚¬ì´ì¦ˆê°€ offsetë³´ë‹¤ í´ ê²½ìš° 
+	Inodeì— í•„ìš”ì—†ëŠ” ë¶€ë¶„ ë‚ ë¦°ë‹¤. 
+	int offset :: ë‚ ë¦¬ê¸° ì‹œì‘í•˜ëŠ” ë¶€ë¶„
+	int inodeNum :: ë¸”ë¡ì„ ê´€ë¦¬í•˜ëŠ” InodeNo. */
 void LoseFileBlock(int offset, int inodeNum);
+int ResetDir(int inodeNum, FileType type);
+int ResetFile(int inodeNum, FileType type);
+void RemoveLogicalBlock(int itemInodeNum, int removeLogicalBlockNum);
 
-
-/* FSI ÃÊ±âÈ­*/
+int RemoveItem(char* itemName, FileType fType);
+/*	í•´ë‹¹ ë””ë ‰í† ë¦¬ INodeì˜ DirEntryList ê°€ì ¸ì˜¤ëŠ” í•¨ìˆ˜
+	int inodeNum :: ë””ë ‰í† ë¦¬ì˜ Inode No.
+	DirEntry* pDirEntry :: DirEntryList ë‹´ì„ ë³€ìˆ˜
+	int* logicalBlockNums :: Logicalë¸”ë¡ë„˜ë²„ë¦¬ìŠ¤íŠ¸
+	return Logicalë¸”ë¡ë„˜ë²„ ê°œìˆ˜ */
+DirEntryInfo* GetDirEntryInfoList(int inodeNum, int* count, int* logicalBlockNums, int* logicalCount);
+int GetItemType(int inodeNum);
+/* FSI ì´ˆê¸°í™”*/
 void InitFileSysInfo();
-/* FSIÀÇ numAllocBlocks, numFreeBlocks ¾÷µ¥ÀÌÆ®
-	int isAdd :: 1ÀÌ¸é ÇÒ´ç ºí·Ï 1Áõ°¡, 0ÀÌ¸é 1°¨¼Ò*/
+/* FSIì˜ numAllocBlocks, numFreeBlocks ì—…ë°ì´íŠ¸
+	int isAdd :: 1ì´ë©´ í• ë‹¹ ë¸”ë¡ 1ì¦ê°€, 0ì´ë©´ 1ê°ì†Œ*/
 void UpdateNumBlockFSI(int isAdd);
-/* FSIÀÇ numAllocInodes ¾÷µ¥ÀÌÆ®
-int isAdd :: 1ÀÌ¸é ÇÒ´ç Inode 1Áõ°¡, 0ÀÌ¸é 1°¨¼Ò*/
+/* FSIì˜ numAllocInodes ì—…ë°ì´íŠ¸
+int isAdd :: 1ì´ë©´ í• ë‹¹ Inode 1ì¦ê°€, 0ì´ë©´ 1ê°ì†Œ*/
 void UpdateNumInodeFSI(int isAdd);
 
 
-/*ÀÌ °æ·ÎÀÇ »óÀ§ µğ·ºÅä¸®°¡ ·çÆ®ÀÎÁö È®ÀÎ*/
+/*ì´ ê²½ë¡œì˜ ìƒìœ„ ë””ë ‰í† ë¦¬ê°€ ë£¨íŠ¸ì¸ì§€ í™•ì¸*/
 int isParentRoot(char* path);
+
+char* GetItemName(char* path);
 
 void PrintInode(int inodeNum);
 void PrintDirEntryList(int blockNum);
 void PrintIndirectIndexList(int blockNum);
 
+void printFileSys();
+void PrintEntryInfoList(int size, DirEntryInfo* dInfoEntry);
 #endif

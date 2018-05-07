@@ -5,6 +5,7 @@
 #include <wchar.h>
 
 #include "fs.h"
+#include "own_func.h"
 
 //#define MAX_NAME_LEN (20)
 
@@ -56,7 +57,12 @@ void main() {
 	MakeDir("/test5");
 	MakeDir("/test6");
 	MakeDir("/test7");
-	MakeDir("/test7/test8");
+	MakeDir("/test8");
+	MakeDir("/test9");
+	MakeDir("/test10");
+	MakeDir("/test11");
+	MakeDir("/test12");
+	MakeDir("/test13");
 	printf("fd1 = %d\n", fd2=OpenFile("/test7/b.c", OPEN_FLAG_CREATE));
 
 	
@@ -106,5 +112,39 @@ void main() {
 
 	CloseFile(fd1);
 	
+	RemoveDir("/test3");
+	RemoveFile("/a.c");
+	
+
+	PrintIndirectIndexList(27);
+	PrintInode(0);
+	
+
+	printf("\n\n");
+	int itemCount;
+	DirEntryInfo* pDirEntry = (DirEntryInfo*)malloc(sizeof(DirEntryInfo)*15);
+	PrintEntryInfoList(itemCount = EnumerateDirStatus("/", pDirEntry, 15), pDirEntry);
+
+	RemoveDir("/test5");
+
+	PrintIndirectIndexList(27);
+	PrintInode(0);
+
+
+	pDirEntry = (DirEntryInfo*)malloc(sizeof(DirEntryInfo) * 15);
+	PrintEntryInfoList(itemCount = EnumerateDirStatus("/", pDirEntry, 15), pDirEntry);RemoveDir("/test5");
+
+	RemoveDir("/test10");
+	RemoveDir("/test13");
+	RemoveDir("/test12");
+	RemoveDir("/test6");
+	RemoveDir("/test7");
+	PrintIndirectIndexList(27);
+	PrintInode(0);
+
+
+	pDirEntry = (DirEntryInfo*)malloc(sizeof(DirEntryInfo) * 15);
+	PrintEntryInfoList(itemCount = EnumerateDirStatus("/", pDirEntry, 15), pDirEntry);
+
 	return;
 }

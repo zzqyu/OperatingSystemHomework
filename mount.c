@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "fs.h"
-#include "Disk.h"
+#include "disk.h"
 #include "own_func.h"
 
 FileSysInfo* pFileSysInfo = NULL;
@@ -10,28 +10,28 @@ FileSysInfo* pFileSysInfo = NULL;
 void		Mount(MountType type)
 {
 	if (type == MT_TYPE_FORMAT) {
-		//Block 512°³ ¸ğµÎ ÃÊ±âÈ­
+		//Block 512ê°œ ëª¨ë‘ ì´ˆê¸°í™”
 		FileSysInit();
-		//Block Bitmap 0~18bit 1·Î ÃÊ±âÈ­
+		//Block Bitmap 0~18bit 1ë¡œ ì´ˆê¸°í™”
 		unsigned char* block = (unsigned char*)malloc(BLOCK_SIZE);
 		//1110 0000
 		block[0] = (unsigned char)0xff;
 		block[1] = (unsigned char)0xff;
 		block[2] = (unsigned char)0xe0;
-		DevWriteBlock(BLOCK_BITMAP_BLK_NUM, block);
+		DevWriteBlock(BLOCK_BITMAP_BLOCK_NUM, block);
 		
 		//free(block);
 
-		//FileSysInfo ÃÊ±âÈ­
+		//FileSysInfo ì´ˆê¸°í™”
 		InitFileSysInfo();
-		//·çÆ®µğ·ºÅä¸® »ı¼º
+		//ë£¨íŠ¸ë””ë ‰í† ë¦¬ ìƒì„±
 		int newBlockNum = GetFreeBlockNum();
 		int newInodeNum = GetFreeInodeNum();
-		//·çÆ® µğ·ºÅä¸®ÀÇ DirEntry ¸®½ºÆ® »ı¼º/ÃÊ±âÈ­
+		//ë£¨íŠ¸ ë””ë ‰í† ë¦¬ì˜ DirEntry ë¦¬ìŠ¤íŠ¸ ìƒì„±/ì´ˆê¸°í™”
 		CreateDirInBlock(newBlockNum, newInodeNum, -1);
 		SetInodeBitmap(newInodeNum);
 		UpdateNumInodeFSI(1);
-		//·çÆ® µğ·ºÅä¸®ÀÇ Inode »ı¼º/ÃÊ±âÈ­
+		//ë£¨íŠ¸ ë””ë ‰í† ë¦¬ì˜ Inode ìƒì„±/ì´ˆê¸°í™”
 		CreateDirInode(newBlockNum, newInodeNum, 0);
 
 		DevReadBlock(3, block);

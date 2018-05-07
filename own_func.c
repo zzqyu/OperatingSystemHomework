@@ -1,4 +1,4 @@
-#include "Disk.h"
+#include "disk.h"
 #include "fs.h"
 #include "own_func.h"
 
@@ -54,15 +54,15 @@ int GetFreeNum(int blkno) {
 
 void GPInode(int inodeSeq, Inode * pInode, char isGet)
 {
-	unsigned char* tempBlock = (unsigned char*)malloc(BLOCK_SIZE);
-	int diskBlkno = inodeSeq / NUM_OF_INODE_PER_BLK + INODELIST_BLK_FIRST;
+	Inode* inodeArr = (Inode*)malloc(BLOCK_SIZE);
+	int diskBlkno = inodeSeq / NUM_OF_INODE_PER_BLOCK + INODELIST_BLOCK_FIRST;
 
 	//inodeSeq / 8 + 3;
 	//메모리할당 + 3;
-	int seqInBlock = inodeSeq % NUM_OF_INODE_PER_BLK;
+	int seqInBlock = inodeSeq % NUM_OF_INODE_PER_BLOCK;
 
 	//해당 inode가 있는 블럭 읽어오기
-	DevReadBlock(diskBlkno, tempBlock);
+	DevReadBlock(diskBlkno, (char*)inodeArr);
 	//GET
 	if (isGet == (char)1) {
 		//Inode에 저장할 내용 뽑아내기
@@ -77,7 +77,6 @@ void GPInode(int inodeSeq, Inode * pInode, char isGet)
 		//Inode에 내용 복사
 		memcpy((Inode*)pInode, tempBlock, sizeof(Inode));*/
 
-		Inode* inodeArr = (Inode*)tempBlock;
 		*pInode = inodeArr[seqInBlock];
 
 		//free(getNodeBit);
@@ -87,14 +86,14 @@ void GPInode(int inodeSeq, Inode * pInode, char isGet)
 		//해당 inode위치에 저장할 inode내용 넣기
 		//tempBlock |= (*pInode << BLOCK_SIZE, 8*INODE_SIZE*seqInBlock);
 		
-		Inode* inodeArr = (Inode*)tempBlock;
 		inodeArr[seqInBlock]  = *pInode ;
-		DevWriteBlock(diskBlkno, (unsigned char*)inodeArr);
+		DevWriteBlock(diskBlkno, (char*)inodeArr);
+
 		/*OrEqual(tempBlock, LeftShift((unsigned char *)pInode, BLOCK_SIZE, 8* sizeof(Inode)*seqInBlock), BLOCK_SIZE);
 		//DevWrite로 저장한다.
 		DevWriteBlock(diskBlkno, tempBlock);*/
 	}
-	free(tempBlock);
+	free(inodeArr);
 	
 }
 
@@ -278,22 +277,23 @@ int AddDirEntry() {
 	return newBlockNum;
 }
 
-int UpdateDirInBlock(char* path, int newInodeNum) {
+int UpdateDirInBlock(char* path, int newInodeNum, int isUpdate) {
 	//최상위 디렉 Inode를 획득해서 루트블록넘버를 획득
 	//획득한 블록넘버로 해당블록의 Dir엔트리에 접근
 	//해당 Dir엔트리 순차조회
 	//접근할 디렉토리의 상위 디렉토리 엔트리를 볼수 있을 때까지 반복
+	int endFlag = 0;
 	int pathLength = strlen(path+4); //경로의 길이
 	char* tempPath = (char*)malloc(pathLength); //path 인자의 임시
 	strcpy(tempPath, "");
 	int inodeNum = GetDirInode(path, -1);
 	//항목 추가 결과
 	int setResult = -1;
-	
-	if (isParentRoot(path)) 
+	printf("[UpdateDirInBlock]inodeNum = %d\n", inodeNum);
+	if (isParentRoot(path))
 		strcpy(tempPath, "ROOT");
 	strcat(tempPath, path);
-	
+
 	Inode* inode = (Inode*)malloc(sizeof(Inode));
 	GetInode(inodeNum, inode);
 	// 생성할 파일/디렉 이름 만들기
@@ -304,24 +304,25 @@ int UpdateDirInBlock(char* path, int newInodeNum) {
 	}
 
 	free(tempPath);
-	
-	for (int i = 0; i < NUM_OF_DIRECT_BLK_PTR; i++) {
+
+	for (int i = 0; i < NUM_OF_DIRECT_BLOCK_PTR; i++) {
 		//생성할 하위 디렉/파일 정보 기록 저장
 		//다이렉트 블록 검사
 		
-		if ( (setResult =SetDirFileNameInBlock(inode->dirBlkPtr[i], lastName, newInodeNum)) == newInodeNum ) {
-			free(inode);
-			return inodeNum;
+		if ( (setResult =SetDirFileNameInBlock(inode->dirBlockPtr[i], lastName, newInodeNum, isUpdate)) == newInodeNum ) {
+			setResult = inodeNum;
+			endFlag = 1;
+			break;
 		}
 		else if (setResult >= 10000) {
-			free(inode);
-			return setResult;
+			endFlag = 1;
+			break;
 		}
 		//빈곳 없으면 다음 다이렉트 블록 검사
 		//하기 전에 다음 다이렉트 블록이 할당이 안되어있으면
 		//할당해줌
-		if (i < NUM_OF_DIRECT_BLK_PTR-1 && inode->dirBlkPtr[i+1] == -1) {
-			inode->dirBlkPtr[1] = AddDirEntry();
+		if (isUpdate == 1 && (i < NUM_OF_DIRECT_BLOCK_PTR-1 && inode->dirBlockPtr[i+1] == -1)) {
+			inode->dirBlockPtr[1] = AddDirEntry();
 			PutInode(inodeNum, inode);
 			/*inode = (Inode*)malloc(sizeof(Inode));
 			GetInode(inodeNum, inode);*/
@@ -329,43 +330,43 @@ int UpdateDirInBlock(char* path, int newInodeNum) {
 		//빈곳이 없으면 인다이렉트 블록 검사
 		//하기 전에 인다이렉트 블록이 할당이 안되어 있으면 
 		//할당해줌
-		else if (i == NUM_OF_DIRECT_BLK_PTR - 1 && inode->indirBlkPointer == -1) {
-			inode->indirBlkPointer = CreateIndirectBlock();
+		else if (isUpdate == 1 && (i == NUM_OF_DIRECT_BLOCK_PTR - 1 && inode->indirBlockPtr == -1)) {
+			inode->indirBlockPtr = CreateIndirectBlock();
 			PutInode(inodeNum, inode);
 			/*inode = (Inode*)malloc(sizeof(Inode));
 			GetInode(inodeNum, inode);*/
 		}
 
 	}
+	if (endFlag) {
+		free(inode);
+		return setResult;
+	}
 	//인다이렉트 블록번호 리스트 가져오기
 	unsigned char* block = (unsigned char*)malloc(BLOCK_SIZE);
-	DevReadBlock(inode->indirBlkPointer, block);
+	DevReadBlock(inode->indirBlockPtr, block);
 	int* blockIndexs = (int *)block;
 
 	//빈곳 있는 
 	for (int i = 0; i < BLOCK_SIZE / sizeof(int); i++) {
-		if (blockIndexs[i] == -1) {
+		if (isUpdate == 1  && blockIndexs[i] == -1) {
 			blockIndexs[i] = AddDirEntry();
-			DevWriteBlock(inode->indirBlkPointer, (unsigned char*)blockIndexs);
-			
+			DevWriteBlock(inode->indirBlockPtr, (unsigned char*)blockIndexs);
 		}
-		if ((setResult = SetDirFileNameInBlock(blockIndexs[i], lastName, newInodeNum)) == newInodeNum) {
-			free(block);
-			free(inode);
-			return inodeNum;
+		if ((setResult = SetDirFileNameInBlock(blockIndexs[i], lastName, newInodeNum, isUpdate)) == newInodeNum) {
+			setResult = inodeNum;
+			break;
 		}
 		else if (setResult >= 10000) {
-			free(block);
-			free(inode);
-			return setResult;
+			break;
 		}
 	}
 	free(block);
 	free(inode);
-	return -1;
+	return setResult;
 	
 }
-int SetDirFileNameInBlock(int blockNum, char* name, int inodeNum) {
+int SetDirFileNameInBlock(int blockNum, char* name, int inodeNum, int isUpdate) {
 	//정보를 기록할 엔트리가 있는 블록을 디스크에서 가져온다.
 	int answer = -1;
 	
@@ -376,7 +377,7 @@ int SetDirFileNameInBlock(int blockNum, char* name, int inodeNum) {
 	int i = 0;
 	//비어있는 엔트리를 찾으면 정보를 기록한다.
 	for (i = 0; i < BLOCK_SIZE / sizeof(DirEntry); i++) {
-		if (dirEntryList[i].inodeNum == -1) {
+		if (isUpdate ==1 && dirEntryList[i].inodeNum == -1) {
 			dirEntryList[i] = SetDirEntry(name, inodeNum);
 			DevWriteBlock(blockNum, (unsigned char*)dirEntryList);
 			SetInodeBitmap(inodeNum);
@@ -417,7 +418,6 @@ int GetDirInode(char* path, int inodeNum) {
 		free(block);
 	}
 
-	
 	strcpy(parentDirName, strtok(childPath, "/"));
 	strcpy(thisDirName, strtok(NULL, "/"));
 	strcpy(childPath, thisDirName);
@@ -426,6 +426,7 @@ int GetDirInode(char* path, int inodeNum) {
 	//탐색할 경로가 없는 경우
 	if (temp == NULL){
 		free(childPath);
+
 		return inodeNum;
 	}
 	strcat(childPath, "/");
@@ -433,6 +434,7 @@ int GetDirInode(char* path, int inodeNum) {
 	//검색결과가 없으면 -1리턴
 	if ((inodeNum = GetInodeNumInAllDirEntry(thisDirName, inodeNum)) == -1) {
 		free(childPath);
+
 		return -1;
 	}
 	//조회할 경로가 남아있으면 하위의 상대경로로 계속 진행
@@ -454,14 +456,14 @@ int GetInodeNumInAllDirEntry(char* dirName, int inodeNum) {
 	GetInode(inodeNum, inode);
 
 	//다이렉트 블록의 DirEntry 검사
-	for (int i = 0; i < NUM_OF_DIRECT_BLK_PTR; i++) {
+	for (int i = 0; i < NUM_OF_DIRECT_BLOCK_PTR; i++) {
 		//검사할 항목이 없으면 -1리턴
-		if (inode->dirBlkPtr[i] == -1) return answer;
+		if (inode->dirBlockPtr[i] == -1) return answer;
 		//찾은 디렉토리의 InodeNo 리턴
-		if ((answer = GetInodeNumInDirEntry(dirName, inode->dirBlkPtr[i])) != -1) return answer;
+		if ((answer = GetInodeNumInDirEntry(dirName, inode->dirBlockPtr[i])) != -1) return answer;
 	}
 	//다이렉트 블록 검사까지 마치면 Indirect Block 검사
-	return GetInodeNumInAllIndirectDirEntry(dirName, inode->indirBlkPointer);
+	return GetInodeNumInAllIndirectDirEntry(dirName, inode->indirBlockPtr);
 }
 int GetInodeNumInAllIndirectDirEntry(char* dirName, int indirectBlockNum) {
 	int answer = -1;
@@ -501,9 +503,9 @@ void CreateDirInode(int blockNo, int thisInodeNo, int isNotRoot){
 	Inode* newInode = (Inode*)malloc(sizeof(Inode));
 	newInode->size = 16 * (isNotRoot + 1);
 	newInode->type = FILE_TYPE_DIR;
-	newInode->dirBlkPtr[0] = blockNo;
-	newInode->dirBlkPtr[1] = -1;
-	newInode->indirBlkPointer = -1;
+	newInode->dirBlockPtr[0] = blockNo;
+	newInode->dirBlockPtr[1] = -1;
+	newInode->indirBlockPtr = -1;
 	
 	PutInode(thisInodeNo, newInode);
 	
@@ -513,9 +515,9 @@ void CreateFileInode(int thisInodeNo) {
 	Inode* newInode = (Inode*)malloc(sizeof(Inode));
 	newInode->size = 0;
 	newInode->type = FILE_TYPE_FILE;
-	newInode->dirBlkPtr[0] = -1;
-	newInode->dirBlkPtr[1] = -1;
-	newInode->indirBlkPointer = -1;
+	newInode->dirBlockPtr[0] = -1;
+	newInode->dirBlockPtr[1] = -1;
+	newInode->indirBlockPtr = -1;
 
 	PutInode(thisInodeNo, newInode);
 
@@ -546,9 +548,9 @@ void LoseFileBlock(int offset, int inodeNum) {
 
 	int* indirectBlockNumList = NULL; //인다이렉트블록인덱스 리스트
 									  //인다이렉트블록이 존재하는 경우 리스트로드
-	if (inode->indirBlkPointer != -1) {
+	if (inode->indirBlockPtr != -1) {
 		indirectBlockNumList = (int*)malloc(BLOCK_SIZE);
-		DevReadBlock(inode->indirBlkPointer, (char*)indirectBlockNumList);
+		DevReadBlock(inode->indirBlockPtr, (char*)indirectBlockNumList);
 	}
 	//블록내용 버리기
 	for (int i = startBlockSeq; i <= endBlockSeq; i++) {
@@ -556,13 +558,13 @@ void LoseFileBlock(int offset, int inodeNum) {
 		int startOffsetInBlock = 0; //삭제시작하는 블록의 바이트순서
 		int isDirect = 0; //다이렉트블록인가요?
 						  //다이렉트블록인 경우 
-		if (i < NUM_OF_DIRECT_BLK_PTR) {
-			blockNum = inode->dirBlkPtr[i];
+		if (i < NUM_OF_DIRECT_BLOCK_PTR) {
+			blockNum = inode->dirBlockPtr[i];
 			isDirect = 1;
 		}
 		//인다이렉트 블록인경우
 		else
-			blockNum = indirectBlockNumList[i - NUM_OF_DIRECT_BLK_PTR];
+			blockNum = indirectBlockNumList[i - NUM_OF_DIRECT_BLOCK_PTR];
 
 		//삭제 시작할 블록 내의 바이트 정하기
 		//작업할 블록이 없는 경우
@@ -584,16 +586,16 @@ void LoseFileBlock(int offset, int inodeNum) {
 			}
 			//첫블록이 아닌 경우 Inode에서 가리키는 블록을 -1로 초기화
 			else if (startOffsetInBlock == 0) {
-				if (isDirect) inode->dirBlkPtr[i] = -1;
-				else indirectBlockNumList[i - NUM_OF_DIRECT_BLK_PTR] = -1;
+				if (isDirect) inode->dirBlockPtr[i] = -1;
+				else indirectBlockNumList[i - NUM_OF_DIRECT_BLOCK_PTR] = -1;
 				ResetBlockBitmap(blockNum);
 				UpdateNumBlockFSI(0);
 				//IndirectIndex블록 초기화
-				if (i == 2) {
-					DevWriteBlock(inode->dirBlkPtr, block);
-					ResetBlockBitmap(inode->dirBlkPtr);
+				if (i == NUM_OF_DIRECT_BLOCK_PTR) {
+					DevWriteBlock(inode->indirBlockPtr, block);
+					ResetBlockBitmap(inode->indirBlockPtr);
 					UpdateNumBlockFSI(0);
-					inode->indirBlkPointer = -1;
+					inode->indirBlockPtr = -1;
 				}
 			}
 			DevWriteBlock(blockNum, block);
@@ -606,7 +608,255 @@ void LoseFileBlock(int offset, int inodeNum) {
 	if (indirectBlockNumList != NULL) free(indirectBlockNumList);
 	free(inode);
 }
+int ResetDir(int inodeNum, FileType type) {
+	int result = -1;
+	int itemCount = 0;
+	int physicalCount = 0;
+	if (type == FILE_TYPE_DIR) {
+		DirEntryInfo* itemDirEntryList = GetDirEntryInfoList(inodeNum, &itemCount, NULL, &physicalCount);
+		free(itemDirEntryList);
+		if (itemCount == 2) {
+			Inode* inode = (Inode*)malloc(sizeof(Inode));
+			GetInode(inodeNum, inode);
+			int blockNum = inode->dirBlockPtr[0];
+			free(inode);
+			unsigned char* block = (unsigned char*)malloc(BLOCK_SIZE);
+			memset(block, 0, BLOCK_SIZE);
+			DevWriteBlock(blockNum, block);
+			free(block);
+			ResetBlockBitmap(blockNum);
+			UpdateNumBlockFSI(0);
+			char* temp = (char*)malloc(sizeof(Inode));
+			memset(temp, 0, sizeof(Inode));
+			PutInode(inodeNum, (Inode*)temp);
+			free(temp);
+			ResetInodeBitmap(inodeNum);
+			UpdateNumInodeFSI(inodeNum);
+			result = 0;
+		}
+		else {
+			printf("[ResetDir] 안에 뭐 들어있어!!!!!!!!!!!!!!itemCount=%d\n", itemCount);
+		}
+	}
+	return result;
+}
+int ResetFile(int inodeNum, FileType type) {
+	int result = -1;
+	if (type == FILE_TYPE_FILE) {
+		Inode* inode = (Inode*)malloc(sizeof(Inode));
+		GetInode(inodeNum, inode);
+		int physicalBlocksCount = NUM_OF_DIRECT_BLOCK_PTR;
+		int* physicalBlockNums = (int*)malloc(sizeof(int)*NUM_OF_DIRECT_BLOCK_PTR + BLOCK_SIZE);
+		memcpy(physicalBlockNums, inode->dirBlockPtr, sizeof(int)*NUM_OF_DIRECT_BLOCK_PTR);
+		if (inode->indirBlockPtr != -1) {
+			physicalBlocksCount += BLOCK_SIZE / sizeof(int);
+			DevReadBlock(inode->indirBlockPtr, (char*)(physicalBlockNums + NUM_OF_DIRECT_BLOCK_PTR));
+		}
+		for (int i = 0; i < physicalBlocksCount; i++) {
+			if (physicalBlockNums[i] == -1) physicalBlockNums[i] = inode->indirBlockPtr;
+			if (physicalBlockNums[i] == -1)break;
+			unsigned char* block = (unsigned char*)malloc(BLOCK_SIZE);
+			memset(block, 0, BLOCK_SIZE);
+			DevWriteBlock(physicalBlockNums[i], block);
+			free(block);
+			ResetBlockBitmap(physicalBlockNums[i]);
+			UpdateNumBlockFSI(0);
+		}
+		free(physicalBlockNums);
+		memset((char*)inode, 0, sizeof(Inode));
+		PutInode(inodeNum, inode);
+		free(inode);
+		ResetInodeBitmap(inodeNum);
+		UpdateNumInodeFSI(inodeNum);
+		result = 0;
+	}
+	return result;
+}
+void RemoveLogicalBlock(int itemInodeNum, int removeLogicalBlockNum) {
+	Inode* inode = (Inode*)malloc(sizeof(Inode));
+	GetInode(itemInodeNum, inode);
+	if (removeLogicalBlockNum < NUM_OF_DIRECT_BLOCK_PTR) {
+		unsigned char* block = (unsigned char*)malloc(BLOCK_SIZE);
+		memset(block,0,BLOCK_SIZE);
+		DevWriteBlock(inode->dirBlockPtr[removeLogicalBlockNum], block);
+		free(block);
+		ResetBlockBitmap(inode->dirBlockPtr[removeLogicalBlockNum]);
+		UpdateNumBlockFSI(0);
+		inode->dirBlockPtr[removeLogicalBlockNum] = -1;
+		
+	}
+	
+	else {
+		int* indirectBlockNums = (int*)malloc(BLOCK_SIZE);
+		DevReadBlock(inode->indirBlockPtr,(char*)indirectBlockNums);
+		unsigned char* block = (unsigned char*)malloc(BLOCK_SIZE);
+		memset(block, 0, BLOCK_SIZE);
+		DevWriteBlock(indirectBlockNums[removeLogicalBlockNum - NUM_OF_DIRECT_BLOCK_PTR], block);
+		free(block);
+		ResetBlockBitmap(indirectBlockNums[removeLogicalBlockNum - NUM_OF_DIRECT_BLOCK_PTR]);
+		UpdateNumBlockFSI(0);
+		indirectBlockNums[removeLogicalBlockNum - NUM_OF_DIRECT_BLOCK_PTR] = -1;
+		DevWriteBlock(inode->indirBlockPtr, (char*)indirectBlockNums);
+		
+		free(indirectBlockNums);
+		
+	}
+	if (removeLogicalBlockNum == NUM_OF_DIRECT_BLOCK_PTR) {
+		unsigned char* block = (unsigned char*)malloc(BLOCK_SIZE);
+		memset(block, 0, BLOCK_SIZE);
+		DevWriteBlock(inode->indirBlockPtr, block);
+		free(block);
+		ResetBlockBitmap(inode->indirBlockPtr);
+		UpdateNumBlockFSI(0);
+		inode->indirBlockPtr = -1;
+	}
+	PutInode(itemInodeNum, inode);
+	free(inode);
+}
+int RemoveItem(char * itemPath, FileType fType)
+{
+	int result = -1;
+	int parentInodeNum;
+	if ((parentInodeNum = GetDirInode(itemPath, -1)) > -1) {
 
+		char itemName[MAX_NAME_LEN] = "";
+		strcpy(itemName, GetItemName(itemPath));
+		
+
+		//상위 디렉토리의 엔트리리스트를 가져오자
+		int* physicalBlockNums = (int *)malloc(sizeof(int)*NUM_OF_DIRECT_BLOCK_PTR+BLOCK_SIZE);
+		int physicalCount = 0;
+		int listCount=0;
+		DirEntryInfo* dirEntryList = GetDirEntryInfoList(parentInodeNum, &listCount, physicalBlockNums, &physicalCount);
+		
+
+		//삭제할 항목을 검사하자
+		int itemInodeNum; //삭제할 아이템의 InodeNo.
+		int itemSeq = 0; //삭제할 아이템의 인덱스
+		for (itemSeq = 0; itemSeq < listCount; itemSeq++) {
+			if (strcmp(dirEntryList[itemSeq].name, itemName) == 0
+				&& fType == dirEntryList[itemSeq].type) {
+				itemInodeNum = dirEntryList[itemSeq].inodeNum;
+				break;
+			}
+		}
+
+		//항목을 상위디렉토리 엔트리에서 제거하자.
+		if (itemSeq < listCount) {
+			//그전에 항목이 디렉토리인 경우 하위 항목이 존재하는지 확인
+			/*
+			int itemCount = 0;
+			if (fType == FILE_TYPE_DIR) {
+				printf("[RemoveItem] 4-1\n");
+				int noMean[] = {0};
+				DirEntryInfo* itemDirEntryList = GetDirEntryInfoList(dirEntryList[itemSeq].inodeNum, &itemCount, NULL, noMean);
+				free(itemDirEntryList);
+				printf("[RemoveItem] 4-1\n");
+
+			}
+			printf("[RemoveItem] 5 itemCount = %d\n", itemCount);*/
+			
+			// 항목이 파일이거나, 하위에 항목이 없는 경우 제거
+			//if (fType == FILE_TYPE_FILE || itemCount == 2) {
+			//Item이 가지고있는 Inode와 블록이 삭제됐는지 확인, 디렉토리 하위 항목이 없어야 하므로 Inode만 제거됨
+			if(ResetDir(itemInodeNum, fType)==0 || ResetFile(itemInodeNum, fType)==0){
+				
+				//삭제할 항목이 있는 로지컬 블록넘버
+				int logicalBlockNum = itemSeq / NUM_OF_DIRENT_PER_BLOCK;
+				int seqInBlock = itemSeq % NUM_OF_DIRENT_PER_BLOCK;
+				int lastLogicalBlockNum = physicalCount -1;
+				int lastSeqInBlock = (listCount-1) % NUM_OF_DIRENT_PER_BLOCK;
+				DirEntry* de = (DirEntry*)malloc(BLOCK_SIZE);
+				DirEntry* lastDe = (DirEntry*)malloc(BLOCK_SIZE);
+				DevReadBlock(physicalBlockNums[logicalBlockNum], (char*)de);
+				DevReadBlock(physicalBlockNums[lastLogicalBlockNum], (char*)lastDe);
+
+				memcpy(de+seqInBlock, lastDe+lastSeqInBlock, sizeof(DirEntry));
+				//de[seqInBlock] = lastDe[lastSeqInBlock];
+				lastDe[lastSeqInBlock].inodeNum = -1;
+				strcpy(lastDe[lastSeqInBlock].name, "");
+				DevWriteBlock(physicalBlockNums[logicalBlockNum], (char*) de);
+				DevWriteBlock(physicalBlockNums[lastLogicalBlockNum],  (char*)lastDe);
+				//엔트리 삭제로 인해 상위디렉토리의 마지막 블록 내에 엔트리가 비는 경우
+				if (lastSeqInBlock == 0) RemoveLogicalBlock(parentInodeNum, lastLogicalBlockNum);
+				free(de);
+				free(lastDe);
+				result = 0;
+			}
+		}
+		free(physicalBlockNums);
+		free(dirEntryList);
+
+	}
+	
+
+	return result;
+}
+DirEntryInfo* GetDirEntryInfoList(int inodeNum, int* count, int* physicalBlockNums, int* physicalCount) {
+	Inode* inode = (Inode*)malloc(sizeof(Inode));
+	DirEntryInfo* dirEntryInfo = NULL;
+	GetInode(inodeNum, inode);
+	physicalCount[0] = 0;
+	int flag = 0;
+	int result = 0;
+	for (int i = 0; i < NUM_OF_DIRECT_BLOCK_PTR; i++) {
+		if (inode->dirBlockPtr[i] == -1) break;
+		
+		physicalBlockNums = (int*)realloc(physicalBlockNums, sizeof(int)*(++physicalCount[0]));
+		physicalBlockNums[i] = inode->dirBlockPtr[i];
+		DirEntry* de = (DirEntry*)malloc(BLOCK_SIZE);
+		DevReadBlock(inode->dirBlockPtr[i],  (char*)de);
+		for (int j = 0; j < NUM_OF_DIRENT_PER_BLOCK; j++) {
+			int k = i * NUM_OF_DIRENT_PER_BLOCK + j;
+			if (de[j].inodeNum == -1) {
+				flag = 1;
+				break;
+			}
+			dirEntryInfo = (DirEntryInfo*)realloc(dirEntryInfo, sizeof(DirEntryInfo)*(++result));
+			strcpy(dirEntryInfo[k].name, de[j].name);
+			dirEntryInfo[k].inodeNum = de[j].inodeNum;
+			dirEntryInfo[k].type = GetItemType(de[j].inodeNum);
+		}
+
+		free(de);
+		if (flag) break;
+	}
+	if (inode->indirBlockPtr > -1) {
+
+		int* indirectBlocks = (int*)malloc(BLOCK_SIZE);
+		DevReadBlock(inode->indirBlockPtr,  (char*)indirectBlocks);
+		for (int i = 0; i < BLOCK_SIZE/sizeof(int); i++) {
+			if (indirectBlocks[i] == -1) break;
+			physicalBlockNums = (int*)realloc(physicalBlockNums, sizeof(int)*(++physicalCount[0]));
+			physicalBlockNums[i+ NUM_OF_DIRECT_BLOCK_PTR] = indirectBlocks[i];
+			DirEntry* de = (DirEntry*)malloc(BLOCK_SIZE);
+			DevReadBlock(indirectBlocks[i],  (char*)de);
+
+			for (int j = 0; j < NUM_OF_DIRENT_PER_BLOCK; j++) {
+				int k = (i + NUM_OF_DIRECT_BLOCK_PTR) * NUM_OF_DIRENT_PER_BLOCK + j;
+				if (de[j].inodeNum == -1) {
+					flag = 1;
+					break;
+				}
+				dirEntryInfo = (DirEntryInfo*)realloc(dirEntryInfo, sizeof(DirEntryInfo)*(++result));
+				strcpy(dirEntryInfo[k].name, de[j].name);
+				dirEntryInfo[k].inodeNum = de[j].inodeNum;
+				dirEntryInfo[k].type = GetItemType(de[j].inodeNum);
+			}
+
+			free(de);
+
+		}
+	}
+	free(inode);
+	count[0] = result;
+	return dirEntryInfo;
+}
+int GetItemType(int inodeNum) {
+	Inode* inode = (Inode*)malloc(sizeof(Inode));
+	GetInode(inodeNum, inode);
+	return inode->type;
+}
 void InitFileSysInfo() {
 	unsigned char* block = (unsigned char*)malloc(BLOCK_SIZE);
 	DevReadBlock(FILESYS_INFO_BLOCK, block);
@@ -617,10 +867,10 @@ void InitFileSysInfo() {
 	fsi->numAllocBlocks = 0;
 	
 	fsi->numAllocInodes = 0;
-	fsi->blockBitmapBlock = BLOCK_BITMAP_BLK_NUM;
-	fsi->inodeBitmapBlock = INODE_BITMAP_BLK_NUM;
-	fsi->inodeListBlock = INODELIST_BLK_FIRST;
-	fsi->dataRegionBlock = INODELIST_BLK_FIRST + INODELIST_BLKS;
+	fsi->blockBitmapBlock = BLOCK_BITMAP_BLOCK_NUM;
+	fsi->inodeBitmapBlock = INODE_BITMAP_BLOCK_NUM;
+	fsi->inodeListBlock = INODELIST_BLOCK_FIRST;
+	fsi->dataRegionBlock = INODELIST_BLOCK_FIRST + INODELIST_BLOCKS;
 
 	fsi->numFreeBlocks = (fsi->blocks) - (fsi->dataRegionBlock);
 	block = (unsigned char*)fsi;
@@ -659,6 +909,21 @@ int isParentRoot(char* path) {
 	}
 	return (count == 1) ? 1 : 0;
 }
+char* GetItemName(char* path) {
+	char* tempPath = (char*)malloc(strlen(path)+5); //path 인자의 임시
+	strcpy(tempPath, "");
+	if (isParentRoot(path))
+		strcpy(tempPath, "ROOT");
+	strcat(tempPath, path);
+
+	// 접근할 파일/디렉 이름 만들기
+	char* lastName = (char*)malloc(MAX_NAME_LEN);
+	char* temp = strtok(tempPath, "/");
+	while ((temp = strtok(NULL, "/")) != NULL) {
+		strcpy(lastName, temp);
+	}
+	return lastName;
+}
 
 
 
@@ -669,9 +934,9 @@ void PrintInode(int inodeNum) {
 	printf("==========================\n");
 	printf("inode[%d].type = %d\n", inodeNum, inode->type);
 	printf("inode[%d].size = %d\n", inodeNum, inode->size);
-	printf("inode[%d].dirBlkPtr[0] = %d\n", inodeNum, inode->dirBlkPtr[0]);
-	printf("inode[%d].dirBlkPtr[1] = %d\n", inodeNum, inode->dirBlkPtr[1]);
-	printf("inode[%d].indirBlkPointer = %d\n", inodeNum, inode->indirBlkPointer);
+	printf("inode[%d].dirBlockPtr[0] = %d\n", inodeNum, inode->dirBlockPtr[0]);
+	printf("inode[%d].dirBlockPtr[1] = %d\n", inodeNum, inode->dirBlockPtr[1]);
+	printf("inode[%d].indirBlockPtr = %d\n", inodeNum, inode->indirBlockPtr);
 	free(inode);
 }
 void PrintDirEntryList(int blockNum){
@@ -697,4 +962,27 @@ void PrintIndirectIndexList(int blockNum) {
 		printf("Block %d Index[%d] : %d \n", blockNum, i, blockIndexs[i]);
 	}
 	free(block);
+}
+void printFileSys()
+{
+	pFileSysInfo = (struct _FileSysInfo*)malloc(BLOCK_SIZE);
+
+	DevReadBlock(FILESYS_INFO_BLOCK, (char*)pFileSysInfo);
+	printf("--------------------fileSys--------------------\n");
+	printf("blocks : %d\n", pFileSysInfo->blocks);
+	printf("rootInodeNum : %d\n", pFileSysInfo->rootInodeNum);
+	printf("numAllocBlocks : %d\n", pFileSysInfo->numAllocBlocks);
+	printf("numFreeBlocks : %d\n", pFileSysInfo->numFreeBlocks);
+	printf("numAllocInodes : %d\n", pFileSysInfo->numAllocInodes);
+	printf("blockBitmapBlock : %d\n", pFileSysInfo->blockBitmapBlock);
+	printf("inodeBitmapBlock : %d\n", pFileSysInfo->inodeBitmapBlock);
+	printf("inodeListBlock : %d\n", pFileSysInfo->inodeListBlock);
+	printf("dataReionBlock : %d\n", pFileSysInfo->dataRegionBlock);
+	printf("--------------------------------------------\n\n");
+
+}
+void PrintEntryInfoList(int size, DirEntryInfo* dInfoEntry) {
+	for (int i = 0; i < size; i++) {
+		printf("%d  inodeNum = %d, name = %s, type = %d\n", i, dInfoEntry[i].inodeNum, dInfoEntry[i].name, dInfoEntry[i].type);
+	}
 }
