@@ -297,12 +297,8 @@ int UpdateDirInBlock(char* path, int newInodeNum, int isUpdate) {
 	Inode* inode = (Inode*)malloc(sizeof(Inode));
 	GetInode(inodeNum, inode);
 	// 생성할 파일/디렉 이름 만들기
-	char lastName[MAX_NAME_LEN];
-	char* temp = strtok(tempPath, "/");
-	while ((temp = strtok(NULL, "/")) != NULL) {
-		strcpy(lastName, temp);
-	}
-
+	char lastName[MAX_NAME_LEN] = "";
+	strcpy(lastName, GetItemName(tempPath));
 	free(tempPath);
 
 	for (int i = 0; i < NUM_OF_DIRECT_BLOCK_PTR; i++) {
@@ -440,14 +436,7 @@ int GetDirInode(char* path, int inodeNum) {
 	//조회할 경로가 남아있으면 하위의 상대경로로 계속 진행
 	//free(childPath);
 	GetDirInode(childPath, inodeNum);
-	/*
-	//상위디렉토리의 DirEntry에서 조회할 디렉토리의 Inode No.를 가져옴
-	inodeNum = GetInodeNumInAllDirEntry(thisDirName, inodeNum);
-	if (endFlag)  //조회할 경로가 없으면 Inode No. 리턴
-		return inodeNum;
-	else //조회할 경로가 남아있으면 하위의 상대경로로 계속 진행
-		GetDirBlockNo(childPath,inodeNum);
-	*/
+	
 }
 int GetInodeNumInAllDirEntry(char* dirName, int inodeNum) {
 	//조회할 디렉토리의 Inode 가져오기
@@ -713,9 +702,10 @@ void RemoveLogicalBlock(int itemInodeNum, int removeLogicalBlockNum) {
 	PutInode(itemInodeNum, inode);
 	free(inode);
 }
-int RemoveItem(char * itemPath, FileType fType)
+int RemoveItem(char * itemPath, FileType fType, FileDescTable* fdTable)
 {
 	int result = -1;
+	int isOpen = 0;
 	int parentInodeNum;
 	if ((parentInodeNum = GetDirInode(itemPath, -1)) > -1) {
 
@@ -740,25 +730,20 @@ int RemoveItem(char * itemPath, FileType fType)
 				break;
 			}
 		}
+		if (fType == FILE_TYPE_FILE) {
+			for (int fdIndex = 0; fdIndex < MAX_FD_ENTRY_LEN; fdIndex++) {
+				//파일을 사용중인지 확인하자!
+				if (fdTable->file[fdIndex].inodeNum == itemInodeNum && (fdTable->file[fdIndex].bUsed) == 1) {
+					isOpen = 1;
+					printf("파일이 열려있자나~~~~!!!!!!!!!!!!!!!!!!!!!\n");
+					break;
+				}
+			}
+		}
 
 		//항목을 상위디렉토리 엔트리에서 제거하자.
-		if (itemSeq < listCount) {
-			//그전에 항목이 디렉토리인 경우 하위 항목이 존재하는지 확인
-			/*
-			int itemCount = 0;
-			if (fType == FILE_TYPE_DIR) {
-				printf("[RemoveItem] 4-1\n");
-				int noMean[] = {0};
-				DirEntryInfo* itemDirEntryList = GetDirEntryInfoList(dirEntryList[itemSeq].inodeNum, &itemCount, NULL, noMean);
-				free(itemDirEntryList);
-				printf("[RemoveItem] 4-1\n");
-
-			}
-			printf("[RemoveItem] 5 itemCount = %d\n", itemCount);*/
+		if (isOpen==0 && itemSeq < listCount) {
 			
-			// 항목이 파일이거나, 하위에 항목이 없는 경우 제거
-			//if (fType == FILE_TYPE_FILE || itemCount == 2) {
-			//Item이 가지고있는 Inode와 블록이 삭제됐는지 확인, 디렉토리 하위 항목이 없어야 하므로 Inode만 제거됨
 			if(ResetDir(itemInodeNum, fType)==0 || ResetFile(itemInodeNum, fType)==0){
 				
 				//삭제할 항목이 있는 로지컬 블록넘버
@@ -852,6 +837,115 @@ DirEntryInfo* GetDirEntryInfoList(int inodeNum, int* count, int* physicalBlockNu
 	count[0] = result;
 	return dirEntryInfo;
 }
+int	RWFile(int fileDesc, char* pBuffer, int length, int isWrite)
+{
+	
+	int rwByte = 0;
+	//파일의 fd 가져오기
+	FileDesc fileDescItem = pFileDescTable->file[fileDesc];
+	//파일의 오프셋 가져오기
+	int offset = fileDescItem.fileOffset;
+
+	//이 파일이 열린 파일이 아니라면 실패
+	if (fileDescItem.bUsed == 0) return -1;
+
+	//Open후 바로 write하는 경우 또는 file사이즈가 offset보다 클 경우
+	//Inode에 필요없는 부분 날린다
+	if (isWrite == 1) LoseFileBlock(offset, fileDescItem.inodeNum);
+	//파일의 Inode 가져오기
+	Inode* inode = (Inode*)malloc(sizeof(Inode));
+	GetInode(fileDescItem.inodeNum, inode);
+	
+	//작업 시작할 로지컬 블록 순서
+	int startLogicalBlockNum = offset / BLOCK_SIZE;
+	//작업 마지막 로지컬 블록 순서
+	int endLogicalBlockNum = (offset + length) / BLOCK_SIZE;
+	//작업 시작할 로지컬 블록의 시작 바이트
+	int startByteInStartLogicalBlockNum = offset % BLOCK_SIZE;
+	//작업 마지막 로지컬 블록의 마지막 바이트
+	int endByteInEndLogicalBlockNum = (offset + length) % BLOCK_SIZE;
+
+	int* indirectIndexList = NULL;
+	if (inode->indirBlockPtr > -1) {
+		indirectIndexList = (int*)malloc(BLOCK_SIZE);
+		DevReadBlock(inode->indirBlockPtr, (char*)indirectIndexList);
+	}
+
+	for (int i = startLogicalBlockNum; i <= endLogicalBlockNum; i++) {
+		int blockNum = -1;
+		int blockStartByte = 0;
+		int blockCpySize = BLOCK_SIZE;
+		//다이렉트블록인 경우 
+		if (i < NUM_OF_DIRECT_BLOCK_PTR)
+			blockNum = inode->dirBlockPtr[i];
+		//인다이렉트블록으로 진입하는 경우 , 인다이렉트 블록이 할당되지 않았다면
+		else if (i == NUM_OF_DIRECT_BLOCK_PTR && inode->indirBlockPtr == -1) {
+			if (isWrite == 1) { //쓰기인 경우 인다이텍트 할당
+				inode->indirBlockPtr = CreateIndirectBlock();
+				indirectIndexList = (int*)malloc(BLOCK_SIZE);
+				DevReadBlock(inode->indirBlockPtr, (char*)indirectIndexList);
+			}//읽기인 경우는 중지
+			else break;
+			blockNum = indirectIndexList[i - NUM_OF_DIRECT_BLOCK_PTR];
+		}
+		//일반적인 인다이렉트 블록인경우
+		else
+			blockNum = indirectIndexList[i - NUM_OF_DIRECT_BLOCK_PTR];
+
+
+		// 쓰기일 경우 블록번호가 inode에 할당된게 없으면 할당해 준다. 
+		if (isWrite == 1 && blockNum == -1) {
+			blockNum = GetFreeBlockNum();
+			if (i < NUM_OF_DIRECT_BLOCK_PTR) inode->dirBlockPtr[i] = blockNum;
+			else
+				indirectIndexList[i - NUM_OF_DIRECT_BLOCK_PTR] = blockNum;
+			//할당이 됐다면 비트맵, FSI  업데이트
+			if (blockNum >= 0) {
+				SetBlockBitmap(blockNum);
+				UpdateNumBlockFSI(1);
+			}
+		}
+
+		//블록할당이 안된 경우
+		if (blockNum == -1) break;
+
+		//디스크에서 블록 읽어오기
+		unsigned char* block = (unsigned char*)malloc(BLOCK_SIZE);
+		DevReadBlock(blockNum, block);
+		if (i == startLogicalBlockNum) {
+			blockStartByte = startByteInStartLogicalBlockNum;
+			blockCpySize -= blockStartByte;
+		}
+		if (i == endLogicalBlockNum)
+			blockCpySize = endByteInEndLogicalBlockNum;
+		if (isWrite == 1)
+			memcpy(block + blockStartByte, pBuffer + rwByte, blockCpySize);
+		else
+			memcpy(pBuffer + rwByte, block + blockStartByte, blockCpySize);
+		
+		rwByte += blockCpySize;
+		if (isWrite == 1) DevWriteBlock(blockNum, block);
+		free(block);
+
+		// 마지막 작업 블록일 경우
+		if (rwByte == length) break;
+
+	}
+	fileDescItem.fileOffset += rwByte;
+
+	if (isWrite == 1) {
+		if (indirectIndexList != NULL) DevWriteBlock(inode->indirBlockPtr, (char*)indirectIndexList);
+		inode->size = fileDescItem.fileOffset;
+		PutInode(fileDescItem.inodeNum, inode);
+	}
+	free(inode);
+	pFileDescTable->file[fileDesc] = fileDescItem;
+
+	if (indirectIndexList != NULL) free(indirectIndexList);
+	return rwByte;
+}
+
+
 int GetItemType(int inodeNum) {
 	Inode* inode = (Inode*)malloc(sizeof(Inode));
 	GetInode(inodeNum, inode);

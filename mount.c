@@ -36,6 +36,9 @@ void		Mount(MountType type)
 
 		DevReadBlock(3, block);
 	}
+	else if (MT_TYPE_READWRITE) {
+		DevOpenDisk();
+	}
 }
 
 

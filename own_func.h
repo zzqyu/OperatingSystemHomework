@@ -150,13 +150,16 @@ int ResetDir(int inodeNum, FileType type);
 int ResetFile(int inodeNum, FileType type);
 void RemoveLogicalBlock(int itemInodeNum, int removeLogicalBlockNum);
 
-int RemoveItem(char* itemName, FileType fType);
+int RemoveItem(char* itemName, FileType fType, FileDescTable* fdTable);
 /*	해당 디렉토리 INode의 DirEntryList 가져오는 함수
 	int inodeNum :: 디렉토리의 Inode No.
 	DirEntry* pDirEntry :: DirEntryList 담을 변수
 	int* logicalBlockNums :: Logical블록넘버리스트
 	return Logical블록넘버 개수 */
 DirEntryInfo* GetDirEntryInfoList(int inodeNum, int* count, int* logicalBlockNums, int* logicalCount);
+
+int	RWFile(int fileDesc, char* pBuffer, int length, int isWrite);
+
 int GetItemType(int inodeNum);
 /* FSI 초기화*/
 void InitFileSysInfo();

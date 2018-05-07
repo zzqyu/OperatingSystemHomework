@@ -101,6 +101,7 @@ void main() {
 	printf("WriteStringBit = %s\n", BlockToBinary(64, result));
 	CloseFile(fd1);
 	printf("Openfile fd1 = %d\n", fd1 = OpenFile("/a.c", OPEN_FLAG_READWRITE));
+	PrintInode(3);
 	char* result2 = (char*)malloc(69);
 	printf("리드전\n");
 	leng = ReadFile(fd1, result2, strlen(result)+ strlen(result1));
@@ -110,12 +111,12 @@ void main() {
 	printf("' ReadFile leng = %d\n", leng);
 	//printf(" ReadStringBit = %s\n", BlockToBinary(64, result1));
 
-	CloseFile(fd1);
+	
 	
 	RemoveDir("/test3");
 	RemoveFile("/a.c");
 	
-
+	CloseFile(fd1);
 	PrintIndirectIndexList(27);
 	PrintInode(0);
 	
@@ -139,6 +140,8 @@ void main() {
 	RemoveDir("/test12");
 	RemoveDir("/test6");
 	RemoveDir("/test7");
+	RemoveFile("/a.c");
+
 	PrintIndirectIndexList(27);
 	PrintInode(0);
 
